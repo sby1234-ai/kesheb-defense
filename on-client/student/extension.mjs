@@ -84,10 +84,67 @@ function renderIdentityView(input) {
   return root;
 }
 
+// ---- 14단계: 업무 앱 접속 판정 (renderDecision) ----
+// 서버가 돌려준 판정만 보여 준다. 네 값 밖의 값과 요청 실패는 허용으로 보이지 않게 한다.
+const DECISION_LABEL = { allow: '접근 허용', deny: '접근 거부', challenge: '추가 인증 또는 확인 필요', unknown: '판정 확인 불가' };
+
+function renderDecisionView(input) {
+  const { status, mode, data, error, appId } = input || {};
+  const root = node('div', undefined, 'student-decision-view');
+  for (const note of modeNotes([{ mode }])) root.append(note);
+
+  if (status === 'idle' || status === undefined) {
+    root.append(node('p', '앱을 골라 접속을 요청하세요. 아직 판정을 요청하지 않았습니다.'));
+    return root;
+  }
+  if (status === 'loading') {
+    root.append(node('p', `판정 확인 중${appId ? ` (앱: ${String(appId)})` : ''}. 결과가 오기 전에는 허용되지 않은 상태입니다.`));
+    return root;
+  }
+  if (status === 'error') {
+    const message = error && error.message ? error.message : '서버가 오류 내용을 알려 주지 않았습니다.';
+    const code = error && error.code ? ` (${String(error.code)})` : '';
+    const box = node('div');
+    box.dataset.decision = 'request-failed';
+    box.append(
+      node('p', `요청 실패: ${message}${code}`),
+      node('p', '서버의 판정을 받지 못했습니다. 이것은 접근 거부 판정이 아니며, 접근이 허용된 것도 아닙니다.'),
+      node('p', '다시 시도하려면 앱 버튼을 직접 다시 누르세요.'),
+    );
+    if (appId) box.append(node('p', `요청한 앱: ${String(appId)}`));
+    root.append(box);
+    return root;
+  }
+  if (status !== 'ok' || !data) {
+    root.append(node('p', '확인 불가(unknown): 판정 결과를 확인할 수 없습니다. 허용되지 않은 상태로 봅니다.'));
+    return root;
+  }
+
+  const known = Object.hasOwn(DECISION_LABEL, data.decision);
+  // 목록에 없는 값은 unknown 으로 다룬다. 허용으로 바꾸지 않는다.
+  const decision = known ? data.decision : 'unknown';
+  const box = node('div');
+  box.dataset.decision = decision;
+  const headline = node('p', `판정: ${DECISION_LABEL[decision]}(${decision})`);
+  box.append(headline);
+  if (!known) box.append(node('p', `서버가 알 수 없는 값(${String(data.decision)})을 보냈습니다. 판정 확인 불가(unknown)로 표시하며 허용되지 않음으로 봅니다.`));
+  if (decision === 'unknown') box.append(node('p', '판정을 확인할 수 없어 접근이 허용되지 않았습니다. 허용으로 보지 마세요.'));
+  if (decision === 'challenge') box.append(node('p', '추가 인증 또는 확인이 필요합니다. 이 앱은 추가 인증을 대신 수행하지 않습니다. 아직 허용되지 않았습니다.'));
+  if (decision === 'deny') box.append(node('p', '서버가 정책에 따라 접근을 거부했습니다.'));
+  if (decision === 'allow') box.append(node('p', '서버가 정책상 접근을 허용했습니다. 실제 앱 접속 성공을 보장하지는 않습니다.'));
+  box.append(
+    node('p', `앱: ${String(data.appId ?? appId ?? '확인 불가')}`),
+    node('p', `이유: ${data.reason ? String(data.reason) : '서버가 이유를 보내지 않았습니다.'}`),
+    node('p', `판정 시각: ${data.checkedAt ? String(data.checkedAt) : '확인 불가'}`),
+  );
+  root.append(box);
+  return root;
+}
+
 export function createStudentView() {
   return {
     renderIdentity(input) { return renderIdentityView(input); },
-    renderDecision() { return '학생 구현 대기: 서버의 판정과 이유를 연결하세요.'; },
+    renderDecision(input) { return renderDecisionView(input); },
     renderEvents() { return '학생 구현 대기: 본인 접속·XDR 기록을 연결하세요.'; },
     renderStatus() { return '학생 구현 대기: 기기·세션·알림과 연결 점검 상태를 구분하세요.'; },
     renderVulnerabilities() { return '학생 구현 대기: 정확한 설치 버전·OSV 출처·조회 시각·부분 결과·조회 실패를 구분하세요.'; },
