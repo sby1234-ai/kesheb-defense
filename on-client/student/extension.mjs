@@ -477,6 +477,102 @@ function unsupportedActions(event) {
   return box;
 }
 
+// ---- 17단계: 앱 내부 AI 연결 상태 (renderAiConnection) · 사건 설명 기초 (renderExplanation) ----
+// 연결 점검(모델 목록 확인)과 사건 설명 실행은 서로 다른 일이다. 점검 성공을 설명 성공처럼 쓰지 않는다.
+// 이 함수들은 요청을 보내지 않는다. 다시 점검·설명 요청은 사용자가 제공 화면의 버튼을 직접 누를 때만 일어난다.
+const AI_CAUSES = [
+  { codes: ['ON_AI_PROVISIONING_PENDING', 'AI_REQUEST_UNVERIFIED', 'ON_AI_AUTHORIZATION_CHANGED', 'SUBJECT_SCOPE_UNVERIFIED'], title: '권한 준비 중·확인 불가', guide: '운영 측 계정·앱 권한이 아직 준비되지 않았거나 확인할 수 없습니다. 학생 잘못이 아니며, 담당자에게 계정 연결과 앱 권한 확인을 요청하세요.' },
+  { codes: ['WB_CLCO_AUTH_REQUIRED'], title: '인증 실패', guide: '계정 연결을 다시 확인하고, 해결되지 않으면 담당자에게 확인하세요. 열쇠를 복사해 붙이지 마세요.' },
+  { codes: ['WB_CLCO_ACCESS_BLOCKED'], title: '접근 제한', guide: '학생 앱의 이용 권한이 제한됐습니다. 계정 연결을 다시 확인하고 담당자에게 확인하세요.' },
+  { codes: ['WB_CLCO_COHORT_BUDGET_EXHAUSTED', 'WB_CLCO_LIMIT_REACHED'], title: '사용량·이용 한도', guide: '반 사용량 또는 이용 한도에 도달했습니다. 담당자에게 확인하세요.' },
+  { codes: ['WB_CLCO_SESSION_CLOSED'], title: '이용 시간 아님', guide: '지금은 AI 이용 시간이 아닙니다. 이용 시간을 확인하세요.' },
+  { codes: ['WB_CLCO_RATE_LIMITED', 'WB_CLCO_TIMEOUT', 'REQUEST_TIMEOUT', 'ENGINE_TIMEOUT', 'TIMEOUT', 'NETWORK', 'NETWORK_ERROR'], title: '요청 제한·시간 초과·네트워크', guide: '잠시 뒤 「현재 API 연결 점검」을 직접 다시 누르세요. 자동으로 다시 점검하지 않습니다.' },
+  { codes: ['WB_CLCO_CANCELLED', 'CANCELLED', 'REQUEST_CANCELLED'], title: '취소됨', guide: '점검을 취소했습니다. 이전 결과는 현재 결과가 아닙니다. 필요하면 직접 다시 점검하세요.' },
+  { codes: ['ON_AI_MODEL_LIST_EMPTY', 'MODEL_NOT_CONFIGURED'], title: '쓸 수 있는 모델 없음', guide: '현재 앱 권한으로 쓸 수 있는 AI 모델이 없습니다. 담당자에게 모델 허용 설정 확인을 요청하세요.' },
+];
+
+function aiCause(code) {
+  return AI_CAUSES.find(cause => cause.codes.includes(code))
+    || { title: '확인 불가', guide: 'AI 연결 결과를 확인할 수 없습니다. 담당자에게 계정 연결과 앱 권한 확인을 요청하세요.' };
+}
+
+function renderAiConnectionView(input) {
+  const { status, data, error, checkedAt } = input || {};
+  // 매번 새 요소를 만들어 돌려주므로, 새 상태가 오면 이전 점검 결과·오류 안내는 화면에 남지 않는다.
+  const root = node('div', undefined, 'student-ai-connection-view');
+  if (!input || status === 'idle') {
+    root.append(
+      node('p', 'AI 연결 점검 전'),
+      node('p', '아직 점검하지 않았습니다. 계정 연결과 AI 연결을 마친 뒤 「현재 API 연결 점검」을 직접 누르세요.'),
+    );
+    return root;
+  }
+  if (status === 'loading') {
+    root.append(node('p', 'AI 연결 점검 중'), node('p', '점검을 멈추려면 제공 화면의 취소 버튼을 누르세요. 취소하면 늦게 온 응답은 현재 결과로 쓰지 않습니다.'));
+    return root;
+  }
+  if (status === 'error') {
+    const code = error && error.code ? String(error.code) : 'AI_REQUEST_UNVERIFIED';
+    const message = error && error.message ? String(error.message) : 'AI 연결 결과를 확인할 수 없습니다.';
+    const cause = aiCause(code);
+    root.dataset.aiCause = code;
+    root.append(
+      node('p', cause.title === '취소됨' ? 'AI 연결 점검 취소됨' : `AI 연결 점검 실패 · ${cause.title}`),
+      node('p', `오류 코드: ${code}`),
+      node('p', `안내: ${message}`),
+      node('p', cause.guide),
+      node('p', '사건 설명은 실행하지 않았습니다. 다시 점검은 「현재 API 연결 점검」을 직접 누를 때만 일어납니다.'),
+    );
+    return root;
+  }
+  if (status === 'ok' && data && data.transportChecked === true) {
+    const auth = data.audienceAuthorization;
+    const authText = auth === 'verified' ? '앱 권한 확인 후 점검(verified)' : auth === 'test' ? '시험 연결 점검(test)' : `확인 불가(${String(auth)})`;
+    root.append(
+      node('p', `AI 연결 점검 결과: ${authText}`),
+      node('p', `사용할 수 있는 모델 수: ${Number.isInteger(data.modelCount) ? data.modelCount : '확인 불가'}`),
+      node('p', `점검 시각: ${checkedAt ? String(checkedAt) : '확인 불가'}`),
+      node('p', '연결만 점검했습니다. 사건 설명은 아직 실행하지 않았습니다. 모델 목록 응답은 사건 설명 결과가 아닙니다.'),
+      node('p', '사건 설명은 보안 기록에서 기록을 골라 따로 요청하고 확인합니다.'),
+    );
+    if (auth === 'test') root.append(node('p', '시험 연결은 실제 앱 권한 확인이 아닙니다.'));
+    return root;
+  }
+  root.append(node('p', '확인 불가: AI 연결 점검 결과를 확인할 수 없습니다.'));
+  return root;
+}
+
+function renderExplanationView(input) {
+  const { event, explanation, checkedAt } = input || {};
+  const status = explanation && explanation.status;
+  if (!explanation || status === 'idle' || !event) {
+    return node('p', '사건 설명 전: 보안 기록에서 기록을 골라 AI 설명을 직접 요청하세요. AI 설명은 참고 정보입니다.');
+  }
+  if (status === 'loading') {
+    return node('p', `사건 ${String(event.id)} AI 설명 요청 중`);
+  }
+  if (status === 'ok' && explanation.data) {
+    const root = node('div', undefined, 'student-explanation-view');
+    root.setAttribute('data-student-explanation-event', String(event.id));
+    root.append(
+      node('p', `사건 ID: ${String(event.id)}`),
+      node('p', `AI 설명: ${String(explanation.data.summary)}`),
+      node('p', `설명 시각: ${checkedAt ? String(checkedAt) : '확인 불가'}`),
+      node('p', 'AI 설명은 참고 정보입니다. 제안은 자동으로 실행하지 않습니다.'),
+    );
+    return root;
+  }
+  // 실패 화면에는 data-student-explanation-event 를 붙이지 않는다.
+  const root = node('div', undefined, 'student-explanation-view');
+  const code = explanation.error && explanation.error.code ? String(explanation.error.code) : 'AI_REQUEST_UNVERIFIED';
+  const message = explanation.error && explanation.error.message ? String(explanation.error.message) : 'AI 설명을 확인할 수 없습니다.';
+  root.append(
+    node('p', `AI 설명 실패: ${message} (${code})`),
+    node('p', `사건 ${String(event.id)}의 기록은 그대로입니다. AI 설명 실패는 기록 삭제나 변경이 아닙니다.`),
+  );
+  return root;
+}
+
 export function createStudentView() {
   return {
     renderIdentity(input) { return renderIdentityView(input); },
@@ -484,8 +580,8 @@ export function createStudentView() {
     renderEvents(input) { return renderEventsView(input); },
     renderStatus(input) { return renderStatusView(input); },
     renderVulnerabilities() { return '학생 구현 대기: 정확한 설치 버전·OSV 출처·조회 시각·부분 결과·조회 실패를 구분하세요.'; },
-    renderAiConnection() { return '학생 구현 대기: 모델 응답 점검과 실제 사건 설명을 구분하고 AI 오류·취소·수동 복구를 안내하세요.'; },
-    renderExplanation() { return '학생 구현 대기: 선택한 사건의 근거·규칙·현재 상태와 AI 설명을 연결하세요. 제안은 자동 실행하지 않습니다.'; },
+    renderAiConnection(input) { return renderAiConnectionView(input); },
+    renderExplanation(input) { return renderExplanationView(input); },
     renderAction() { return '학생 구현 대기: 현재 사건·조치·실제 대상·사람 확인·ACK와 원천 효과·unknown을 구분하세요.'; },
   };
 }
