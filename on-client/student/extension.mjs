@@ -2,8 +2,8 @@
 // 제공 UI를 받은 것만으로 단계 완료를 인정하지 않습니다.
 // ---- 13단계: 로그인·기기·세션 상태 (renderIdentity) ----
 const MODE_LABEL = { demo: '예제 자료', disconnected: '연결 없음', unknown: '확인 불가' };
-const DEVICE_LABEL = { compliant: '정상', noncompliant: '점검 필요', unknown: '확인 불가' };
-const SESSION_LABEL = { active: '사용 중', expired: '만료', revoked: '취소', unknown: '확인 불가' };
+const DEVICE_LABEL = { compliant: '보안 기준 충족', noncompliant: '보안 기준 미충족', unknown: '확인 불가' };
+const SESSION_LABEL = { active: '활성', expired: '만료', revoked: '철회됨', unknown: '확인 불가' };
 
 function node(tag, text, className) {
   const element = document.createElement(tag);
@@ -47,9 +47,10 @@ function renderMe(me) {
   const data = me.status === 'ok' ? me.data : null;
   if (!data || !data.user || !data.device || !data.session) { box.append(node('p', '로그인 정보 확인 불가')); return box; }
   box.append(
-    node('p', `사용자: ${data.user.label || data.user.id}`),
-    node('p', `내 기기: ${data.device.label || data.device.id}`),
+    node('p', `사용자: ${data.user.label || data.user.id} (id: ${String(data.user.id)})`),
+    node('p', `내 기기: ${data.device.label || data.device.id} (id: ${String(data.device.id)})`),
     statusLine('기기 상태', DEVICE_LABEL, data.device.status, 'compliant'),
+    node('p', `세션 id: ${String(data.session.id)}`),
     statusLine('세션 상태', SESSION_LABEL, data.session.status, 'active'),
   );
   return box;
@@ -64,7 +65,7 @@ function renderList(name, resource, table, okValue) {
   if (resource.data.length === 0) { box.append(node('p', `${name} 없음`)); return box; }
   const list = node('ul');
   for (const item of resource.data) {
-    const row = node('li', `${item.label || item.id}: ${labelOf(table, item.status)} (${String(item.status)})${item.status !== okValue ? ' ⚠ 주의' : ''}`);
+    const row = node('li', `${item.label ? item.label + ' ' : ''}(id: ${String(item.id)}): ${labelOf(table, item.status)} (${String(item.status)})${item.status !== okValue ? ' ⚠ 주의' : ''}`);
     if (item.status !== okValue) row.dataset.attention = 'true';
     list.append(row);
   }
