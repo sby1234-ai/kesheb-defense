@@ -17,11 +17,13 @@
 | 항목 | 값 | 근거 |
 |---|---|---|
 | 운영체제 | Windows + PowerShell | `tools/start-alekov.ps1` |
-| Node.js | 24.19.0 | `package.json` 의 `engines.node` |
+| Node.js (수업·검사 기준) | 24.19.0 | `package.json` 의 `engines.node` |
+| Node.js (실행 도구 허용 범위) | 22~24 (24.19.0 이 아니면 `참고: 지금 Node.js 는 vXX 입니다. 수업 기준은 v24.19.0 입니다.` 안내 후 실행) | `tools/start-alekov.ps1` 의 버전 검사, `docs/CONNECTION_TROUBLESHOOT.md` |
 | 외부 npm 의존성 | 없음 (`npm install` 필요 없음) | `package.json` 에 `dependencies` 없음 |
 | 시작 틀 버전 | 0.2.14 | `package.json` 의 `version` |
 | 앱 주소 | http://127.0.0.1:5189 (이 PC 안에서만) | `src/server.mjs` 가 `127.0.0.1` 에서 대기 |
-| 지원하지 않는 환경 | macOS·Linux 실행, 다른 PC에서 접속, Node 24 미만 | 확인하지 않음 |
+| 실행 도구가 막는 환경 | Node.js 21 이하 또는 25 이상 (`지금 Node.js 는 vXX 입니다. 앱은 Node.js 22~24 에서 실행합니다.` 후 중단) | `tools/start-alekov.ps1` |
+| 확인하지 않은 환경 | macOS·Linux 실행, 다른 PC에서 접속, Node.js 22·23 에서의 실제 실행 (학생은 24.19.0 에서만 작업) | 미확인 |
 
 ---
 
@@ -53,7 +55,7 @@ kesheb-defense\                  ← Git 최상위 폴더
 git clone https://github.com/sby1234-ai/kesheb-defense.git
 cd kesheb-defense\on-client
 
-# 2) Node.js 버전 확인 → v24.19.0
+# 2) Node.js 버전 확인 → 기준 v24.19.0 (실행 도구는 22~24 허용)
 node --version
 
 # 3) 학생 코드 문법 확인 (아무 출력 없이 끝나면 정상)
@@ -182,7 +184,7 @@ flowchart LR
 | `조치 상태: 실패(failed).` | 원천이 조치 실패를 알림 | 표시된 사유를 확인합니다. |
 | `확인 불가: 조회 결과를 확인할 수 없습니다. "취약점 없음"이 아닙니다.` | 취약점 조회 실패·미설정 | 취약점이 없다는 뜻이 아닙니다. 조회를 다시 실행합니다. |
 
-실행 도구 자체의 오류(`Node.js 가 없습니다`, `포트 5189 를 다른 프로그램이 쓰고 있습니다`, `앱 서버가 … 초 안에 뜨지 않았습니다`)는 2장 표와 제공 문서 `docs/STUDENT_LAUNCH_GUIDE.md` 4장을 봅니다.
+실행 도구 자체의 오류(`Node.js 가 없습니다` → Node.js 24.19.0 설치, `지금 Node.js 는 vXX 입니다` → Node.js 22~24 설치(기준 24.19.0), `포트 5189 를 다른 프로그램이 쓰고 있습니다`, `앱 서버가 … 초 안에 뜨지 않았습니다`)는 2장 표와 제공 문서 `docs/STUDENT_LAUNCH_GUIDE.md` 4장을 봅니다.
 
 ---
 
