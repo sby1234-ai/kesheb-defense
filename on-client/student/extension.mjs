@@ -542,34 +542,128 @@ function renderAiConnectionView(input) {
   return root;
 }
 
+// ---- 18단계: 근거가 있는 AI 사건 설명 (renderExplanation 완성) ----
+// AI 설명은 해석일 뿐이다. 사실 판단은 근거 글과 원천이 알려 준 상태로 한다.
+// 인용한 근거가 이 사건의 근거에 없으면 지어내지 않고 거부한다. unknown은 정상·안전으로 바꾸지 않는다.
+// 사람 확인 전에는 어떤 조치도 실행하지 않으며, 실행 버튼을 만들지 않는다. 매번 새 DOM을 돌려줘 이전 설명은 남지 않는다.
 function renderExplanationView(input) {
   const { event, explanation, checkedAt } = input || {};
   const status = explanation && explanation.status;
-  if (!explanation || status === 'idle' || !event) {
-    return node('p', '사건 설명 전: 보안 기록에서 기록을 골라 AI 설명을 직접 요청하세요. AI 설명은 참고 정보입니다.');
+
+  // 기록을 고르지 않았으면 먼저 고르라고 안내한다(성공 표식을 붙이지 않는다).
+  if (!event) {
+    return node('p', '사건 설명 전: 보안 기록에서 기록을 먼저 고르세요. AI 설명은 참고 정보입니다.');
+  }
+  if (!explanation || status === 'idle') {
+    return node('p', `사건 ${String(event.id)}의 AI 설명 전: 보안 기록에서 AI 설명을 직접 요청하세요. AI 설명은 참고 정보입니다.`);
   }
   if (status === 'loading') {
     return node('p', `사건 ${String(event.id)} AI 설명 요청 중`);
   }
-  if (status === 'ok' && explanation.data) {
-    const root = node('div', undefined, 'student-explanation-view');
-    root.setAttribute('data-student-explanation-event', String(event.id));
-    root.append(
-      node('p', `사건 ID: ${String(event.id)}`),
-      node('p', `AI 설명: ${String(explanation.data.summary)}`),
-      node('p', `설명 시각: ${checkedAt ? String(checkedAt) : '확인 불가'}`),
-      node('p', 'AI 설명은 참고 정보입니다. 제안은 자동으로 실행하지 않습니다.'),
-    );
-    return root;
+
+  // 실패·거부 화면 공통: data-student-explanation-event 를 붙이지 않는다.
+  const failView = (lines) => {
+    const box = node('div', undefined, 'student-explanation-view');
+    for (const line of lines) box.append(node('p', line));
+    box.append(node('p', `사건 ${String(event.id)}의 기록은 그대로입니다. AI 설명 실패는 기록 삭제나 변경이 아닙니다.`));
+    return box;
+  };
+
+  if (status === 'error') {
+    const code = explanation.error && explanation.error.code ? String(explanation.error.code) : 'AI_REQUEST_UNVERIFIED';
+    const message = explanation.error && explanation.error.message ? String(explanation.error.message) : 'AI 설명을 확인할 수 없습니다.';
+    return failView([`AI 설명 실패: ${message} (${code})`]);
   }
-  // 실패 화면에는 data-student-explanation-event 를 붙이지 않는다.
+
+  const data = explanation.data;
+  if (status !== 'ok' || !data) {
+    return failView(['AI 설명을 확인할 수 없습니다. (AI_REQUEST_UNVERIFIED)']);
+  }
+
+  // AI가 이미 실행했다고 답한 설명은 쓰지 않는다(사람 확인 전 실행 금지).
+  if (data.executed === true) {
+    return failView(['AI가 이미 조치를 실행했다고 답했습니다. 사람 확인 전 실행은 허용하지 않으므로 이 설명은 쓸 수 없습니다. (PROPOSAL_EXECUTED_REJECTED)']);
+  }
+
+  // 근거 대조: AI가 인용한 근거 ID가 모두 이 사건의 근거(event.evidence)에 있어야 한다. 없으면 지어내지 않고 거부한다.
+  const evidenceRows = Array.isArray(event.evidence) ? event.evidence : [];
+  const evidenceById = new Map(evidenceRows.map(row => [String(row.id), row]));
+  const citedIds = Array.isArray(data.evidenceIds) ? data.evidenceIds.map(String) : [];
+  const missing = citedIds.filter(id => !evidenceById.has(id));
+  if (missing.length > 0) {
+    const code = explanation.error && explanation.error.code ? String(explanation.error.code) : 'INSUFFICIENT_EVIDENCE';
+    return failView([
+      `이 AI 설명은 이 사건의 근거와 맞지 않아 쓸 수 없습니다(근거가 맞지 않음). 사건에 없는 근거 ID: ${missing.join(', ')} (${code})`,
+      '없는 근거로 내용을 지어내지 않습니다.',
+    ]);
+  }
+
+  // 여기부터 성공: 바깥 요소에만 성공 표식을 붙인다.
   const root = node('div', undefined, 'student-explanation-view');
-  const code = explanation.error && explanation.error.code ? String(explanation.error.code) : 'AI_REQUEST_UNVERIFIED';
-  const message = explanation.error && explanation.error.message ? String(explanation.error.message) : 'AI 설명을 확인할 수 없습니다.';
+  root.setAttribute('data-student-explanation-event', String(event.id));
   root.append(
-    node('p', `AI 설명 실패: ${message} (${code})`),
-    node('p', `사건 ${String(event.id)}의 기록은 그대로입니다. AI 설명 실패는 기록 삭제나 변경이 아닙니다.`),
+    node('p', `사건 ID: ${String(event.id)}`),
+    node('h4', 'AI 설명(참고용)'),
+    node('p', `AI 요약: ${String(data.summary)}`),
+    node('p', `설명 시각: ${checkedAt ? String(checkedAt) : '확인 불가'}`),
+    node('p', 'AI 설명은 해석입니다. 사실 판단은 아래 근거 글과 원천이 알려 준 상태로 하세요.'),
   );
+
+  // 인용한 근거 ID와 근거 글
+  root.append(node('h5', '인용한 근거(evidence)'));
+  const evidenceList = node('ul');
+  if (citedIds.length === 0) {
+    evidenceList.append(node('li', '인용한 근거가 없습니다.'));
+  } else {
+    for (const id of citedIds) evidenceList.append(node('li', `${id} — ${String(evidenceById.get(id).text)}`));
+  }
+  root.append(evidenceList);
+
+  // 사건의 규칙 글(id와 text를 함께)
+  root.append(node('h5', '규칙(rules)'));
+  const ruleRows = Array.isArray(event.rules) ? event.rules : [];
+  const ruleList = node('ul');
+  if (ruleRows.length === 0) ruleList.append(node('li', '규칙 없음'));
+  for (const row of ruleRows) ruleList.append(node('li', `${String(row.id)} — ${String(row.text)}`));
+  root.append(ruleList);
+
+  // 확인 불가(unknown) 상태만 접속·세션·기기별로 나눠 적는다. unknown을 정상·안전으로 바꾸지 않는다.
+  root.append(node('h5', '확인 불가 상태(unknown)'));
+  const state = event.state || {};
+  const unknownList = node('ul');
+  const unknowns = [['접속', 'access'], ['세션', 'session'], ['기기', 'device']].filter(([, key]) => state[key] === 'unknown');
+  if (unknowns.length === 0) {
+    unknownList.append(node('li', '없음'));
+  } else {
+    for (const [title] of unknowns) unknownList.append(node('li', `${title}: 확인 불가(unknown)`));
+  }
+  root.append(unknownList);
+
+  // 제안(proposals): 없으면 까닭을, 있으면 사람 확인 필요·미실행을 함께 적는다.
+  root.append(node('h5', '조치 제안(proposals)'));
+  const proposals = Array.isArray(data.proposals) ? data.proposals : [];
+  const supported = Array.isArray(event.supportedActions) ? event.supportedActions : [];
+  if (proposals.length === 0) {
+    root.append(node('p', supported.length === 0
+      ? '원천이 지원하는 조치가 없어 제안이 없습니다(정상).'
+      : 'AI가 제안한 조치가 없습니다.'));
+  } else {
+    const proposalList = node('ul');
+    for (const proposal of proposals) {
+      const item = node('li');
+      item.append(
+        node('p', `조치: ${String(proposal.action)}`),
+        node('p', `까닭: ${String(proposal.reason)}`),
+        node('p', '사람 확인이 필요하며 실행되지 않았습니다.'),
+      );
+      const pcited = Array.isArray(proposal.evidenceIds) ? proposal.evidenceIds.map(String) : [];
+      if (pcited.length > 0) item.append(node('p', `제안 근거: ${pcited.join(', ')}`));
+      proposalList.append(item);
+    }
+    root.append(proposalList);
+  }
+  root.append(node('p', '제안은 사람이 확인해야 실행되며, 이 화면은 어떤 조치도 실행하지 않습니다. 실행 버튼은 없습니다.'));
+
   return root;
 }
 
