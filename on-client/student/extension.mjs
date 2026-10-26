@@ -667,6 +667,84 @@ function renderExplanationView(input) {
   return root;
 }
 
+// ---- 19단계: AI 조치 제안과 서버 처리 결과 (renderAction) ----
+// 제안(prepared)과 실제 처리(executing·pending·succeeded 등)를 나눈다. 서버가 받았다는 것(ACK=pending)은 효과가 아니다.
+// 효과 확인은 observation.effectApplied === true 일 때만 성공으로 본다. unknown은 성공으로도 실패로도 보지 않는다.
+// 확인 번호 같은 값은 입력에 없으면 만들지 않는다. 버튼은 만들지 않고 제공 화면 버튼을 쓰게 안내한다. 매번 새 DOM으로 다시 그린다.
+function renderActionView(input) {
+  const { status, event, actionId, target, receipt, observation, message, confirmationExpiresAt, error } = input || {};
+  const root = node('div', undefined, 'student-action-view');
+
+  if (!input || status === 'idle' || status === undefined) {
+    root.append(
+      node('p', '조치: 아직 미실행(idle). 조치는 제공 화면의 버튼으로만 준비·집행합니다.'),
+      node('p', '지금 기록은 원천이 지원하는 조치가 없으면(supportedActions 비어 있음) 조치 준비 버튼이 나오지 않는 것이 정상입니다.'),
+    );
+    return root;
+  }
+  if (status === 'loading') {
+    root.append(node('p', '조치 상태 불러오는 중(loading)'));
+    return root;
+  }
+  if (status === 'error') {
+    const code = error && error.code ? String(error.code) : 'ACTION_REQUEST_UNVERIFIED';
+    const msg = error && error.message ? String(error.message) : '조치 요청을 처리하지 못했습니다.';
+    root.append(
+      node('p', `조치 요청 처리 안 됨(error): ${msg} (${code})`),
+      node('p', '서버에 조치가 전달되지 않았습니다. 이것은 결과가 아닙니다.'),
+    );
+    return root; // 실패 화면에는 성공 식별자를 붙이지 않는다.
+  }
+
+  // 상태별 문장(원래 값과 함께). 끝났거나 성공했다고 오해할 문장은 쓰지 않는다.
+  if (status === 'prepared') {
+    root.append(node('p', '조치 상태: 준비됨 · 미실행(prepared). 사람이 대상과 조치를 확인해야 집행되며 아직 실행되지 않았습니다.'));
+    if (confirmationExpiresAt != null) root.append(node('p', `확인 기한: ${String(confirmationExpiresAt)}`));
+  } else if (status === 'executing') {
+    root.append(node('p', '조치 상태: 서버에 전달 중(executing). 결과는 아직 확인되지 않았습니다(완료 아님).'));
+  } else if (status === 'pending') {
+    root.append(node('p', '조치 상태: 서버 접수 · 처리 중(pending). 서버가 받았다는 것(ACK)은 효과가 아니며 결과는 아직 확인되지 않았습니다(완료 아님).'));
+  } else if (status === 'succeeded') {
+    if (observation && observation.effectApplied === true) {
+      root.append(node('p', '조치 상태: 효과 확인(succeeded). effectApplied: true'));
+      if (observation.observedAt != null) root.append(node('p', `효과 관측 시각: ${String(observation.observedAt)}`));
+    } else {
+      root.append(node('p', '조치 상태: 결과 불명(succeeded 로 왔으나 effectApplied 가 true 가 아님). 효과가 확인되지 않았으므로 성공으로 보지 말고 원천 결과를 다시 조회하세요.'));
+    }
+  } else if (status === 'denied') {
+    root.append(node('p', `조치 상태: 거절(denied).${message != null ? ` 사유: ${String(message)}` : ''}`));
+  } else if (status === 'failed') {
+    root.append(node('p', `조치 상태: 실패(failed).${message != null ? ` 사유: ${String(message)}` : ''}`));
+  } else if (status === 'unknown') {
+    root.append(node('p', '조치 상태: 결과 불명(unknown). 효과 없음으로도 성공으로도 판단하지 말고 원천 결과만 다시 조회하세요.'));
+  } else if (status === 'expired') {
+    root.append(node('p', '조치 상태: 확인 기한 지남(expired). 조치를 처음부터 다시 준비하세요.'));
+  } else {
+    root.append(node('p', `조치 상태: 확인 불가(${String(status)}).`));
+  }
+
+  // 현재 사건·근거·대상·접수 식별자(있는 것만 글자로). 입력에 없는 값은 만들지 않는다.
+  if (event && event.id != null) root.append(node('p', `사건 ID: ${String(event.id)}`));
+  const evidenceRows = event && Array.isArray(event.evidence) ? event.evidence : [];
+  if (evidenceRows.length > 0) root.append(node('p', `근거 ID: ${evidenceRows.map(row => String(row.id)).join(', ')}`));
+  if (actionId != null) root.append(node('p', `조치 ID(actionId): ${String(actionId)}`));
+  if (target && target.id != null) {
+    root.append(node('p', `실제 대상 ID: ${String(target.id)}${target.generation != null ? ` (generation: ${String(target.generation)})` : ''}`));
+  }
+  if (receipt && receipt.requestId != null) root.append(node('p', `요청 번호(requestId): ${String(receipt.requestId)}`));
+  if (receipt && receipt.receiptId != null) root.append(node('p', `접수 번호(receiptId): ${String(receipt.receiptId)}`));
+  if (receipt && receipt.version != null) root.append(node('p', `버전(version): ${String(receipt.version)}`));
+  if (receipt && receipt.replayed === true) root.append(node('p', '이미 접수된 요청입니다(replayed: true). 같은 요청을 다시 실행한 것으로 세지 않습니다.'));
+
+  root.append(node('p', '조치 준비·확인·집행은 제공 화면의 버튼으로만 합니다. 이 칸은 버튼을 만들지 않고 상태만 보여 줍니다.'));
+
+  // 상태를 아는 화면에만 현재 사건·요청 식별자를 붙여, 지금 고른 사건·요청과 묶는다.
+  if (event && event.id != null) root.setAttribute('data-student-action-event', String(event.id));
+  if (receipt && receipt.requestId != null) root.setAttribute('data-student-action-request', String(receipt.requestId));
+
+  return root;
+}
+
 export function createStudentView() {
   return {
     renderIdentity(input) { return renderIdentityView(input); },
@@ -676,6 +754,6 @@ export function createStudentView() {
     renderVulnerabilities() { return '학생 구현 대기: 정확한 설치 버전·OSV 출처·조회 시각·부분 결과·조회 실패를 구분하세요.'; },
     renderAiConnection(input) { return renderAiConnectionView(input); },
     renderExplanation(input) { return renderExplanationView(input); },
-    renderAction() { return '학생 구현 대기: 현재 사건·조치·실제 대상·사람 확인·ACK와 원천 효과·unknown을 구분하세요.'; },
+    renderAction(input) { return renderActionView(input); },
   };
 }
