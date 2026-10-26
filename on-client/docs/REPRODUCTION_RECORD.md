@@ -8,13 +8,13 @@
 |---|---|
 | 학생 버전 표시 | **v0.9 · 검증 중인 버전 (v1.0 아님)** |
 | v1.0 이 아닌 이유 | 19단계 실제 조치 집행 연결, 접근 제어·XDR 시스템 실제 연결, CLCO 수업용 AI 실제 설명, OSV 실제 조회가 미확인(7장 UNV) |
-| 시작 틀 버전 | 0.2.14 (`package.json`) · 서버가 응답에 싣는 `starterVersion`/`version` 값은 `0.1.0` (`/api/diagnostics` 응답 원문) |
+| 시작 틀 버전 | 0.2.11 (제출 커밋의 `package.json` `version`, `README.md` 제목) · 서버가 응답에 싣는 `starterVersion`/`version` 값은 `0.1.0` (`/api/diagnostics` 응답 원문) |
 | 저장소 | https://github.com/sby1234-ai/kesheb-defense |
 | 브랜치 | `master` |
 | 재현한 커밋 | `c31ed8b409da09ca81b74ad67ffd372dbb075c26` (21단계 통과 커밋) |
 | 재현한 학생 코드 지문 | `student/extension.mjs` SHA256 `6B5955947D8B054F32F5FCBA11CBE028AD5B60376BB40E387C121A3FEB30BE38` |
 
-**같은 최종 소스 기준**: 22단계 제출 커밋은 위 재현 커밋에 **문서 파일 2개만** 더한 것입니다 — 이 문서(`docs/REPRODUCTION_RECORD.md`)와 재현 로그 원본(`docs/evidence/repro-log-20261026-151025.txt`). 코드·설정·실행 도구는 바뀌지 않았습니다. 확인 명령: `git diff --stat c31ed8b HEAD` → 위 두 파일만 나와야 합니다. 서로 다른 커밋의 결과를 합쳐 쓰지 않았습니다.
+**같은 최종 소스 기준**: 22단계 제출 커밋은 위 재현 커밋에서 **문서만** 바뀌었습니다. 코드·설정·실행 도구(`student/`, `src/`, `public/`, `tools/`, `package.json`, `.env.example`)는 바뀌지 않았습니다. 바뀐 문서: 이 문서(`docs/REPRODUCTION_RECORD.md`), 재현 로그 원본(`docs/evidence/repro-log-20261026-151025.txt`), 학생 데이터 백업·복원 절차(`docs/STUDENT_DATA_BACKUP.md`), 21단계 설명서의 시작 틀 버전 표기 정정(`docs/STUDENT_GUIDE.md`, 0.2.14 → 실제 원문 값 0.2.11). 확인 명령: `git diff --stat c31ed8b HEAD -- on-client/student on-client/src on-client/public on-client/tools on-client/package.json` → 출력 없음이어야 합니다. 서로 다른 커밋의 결과를 합쳐 쓰지 않았습니다.
 
 **증거**: 2·3장의 명령 결과와 시각은 재현 스크립트가 남긴 로그 원본 `docs/evidence/repro-log-20261026-151025.txt` 에 있습니다(비밀 값 없음). 4장의 화면 문구는 같은 앱 화면을 브라우저에서 읽은 기록입니다.
 
@@ -93,6 +93,8 @@
 | 인증·설정 파일 | `.env`·계정 연결 정보를 새 폴더로 복사하지 않음 | 새 폴더 `.env` 없음 확인 |
 | 앱 데이터 | 기본 실행은 조치 기록 DB 를 쓰지 않음 (`src/actions/store.mjs` 는 명시적으로 지정한 기존 SQLite 파일에만 표를 추가) | 이번 재현에서 지정하지 않음 → 기록·삭제된 앱 데이터 없음 |
 | 재현 폴더 | `C:\kesheb-repro-20261026-151025` 를 새로 만듦 | 원래 폴더와 분리. 지워도 원래 작업에 영향 없음 |
+
+학생 데이터의 **보존 범위, 백업 절차, 복원 순서, 복원 한계**는 별도 문서 `docs/STUDENT_DATA_BACKUP.md` 에 정리했습니다. 이번 재현의 새 폴더 clone 은 그 문서 3-1 「전체 복원」 절차를 실제로 한 기록이기도 합니다.
 
 ---
 

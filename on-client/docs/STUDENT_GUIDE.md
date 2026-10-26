@@ -20,7 +20,7 @@
 | Node.js (수업·검사 기준) | 24.19.0 | `package.json` 의 `engines.node` |
 | Node.js (실행 도구 허용 범위) | 22~24 (24.19.0 이 아니면 `참고: 지금 Node.js 는 vXX 입니다. 수업 기준은 v24.19.0 입니다.` 안내 후 실행) | `tools/start-alekov.ps1` 의 버전 검사, `docs/CONNECTION_TROUBLESHOOT.md` |
 | 외부 npm 의존성 | 없음 (`npm install` 필요 없음) | `package.json` 에 `dependencies` 없음 |
-| 시작 틀 버전 | 0.2.14 | `package.json` 의 `version` |
+| 시작 틀 버전 | 0.2.11 | `package.json` 의 `version`, `README.md` 제목 「내 보안 Agent 시작 틀 0.2.11」 |
 | 앱 주소 | http://127.0.0.1:5189 (이 PC 안에서만) | `src/server.mjs` 가 `127.0.0.1` 에서 대기 |
 | 실행 도구가 막는 환경 | Node.js 21 이하 또는 25 이상 (`지금 Node.js 는 vXX 입니다. 앱은 Node.js 22~24 에서 실행합니다.` 후 중단) | `tools/start-alekov.ps1` |
 | 확인하지 않은 환경 | macOS·Linux 실행, 다른 PC에서 접속, Node.js 22·23 에서의 실제 실행 (학생은 24.19.0 에서만 작업) | 미확인 |
