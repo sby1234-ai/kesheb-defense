@@ -28,22 +28,52 @@
 
 PowerShell 을 Git 최상위 폴더 `C:\kesheb-defense` 에서 엽니다.
 
+### 2-1. 백업 대상 (1장의 "백업 대상"과 같은 목록)
+
+| 경로 | 내용 |
+|---|---|
+| `on-client/student/` | `extension.mjs`, `engine-adapter.mjs` (학생 영역 전체) |
+| `on-client/docs/STUDENT_GUIDE.md` | 21단계 학생 설명서 |
+| `on-client/docs/REPRODUCTION_RECORD.md` | 22단계 재현 기록 |
+| `on-client/docs/STUDENT_DATA_BACKUP.md` | 이 문서 |
+| `on-client/docs/evidence/` | 재현 로그 원본 |
+
+### 2-2. 백업 전 변경 범위 확인
+
 ```powershell
-# 1) 바뀐 학생 파일 확인
-git status
+# 1) 백업 대상 안에서 바뀐 파일만 보기
+git status --short -- on-client/student on-client/docs/STUDENT_GUIDE.md on-client/docs/REPRODUCTION_RECORD.md on-client/docs/STUDENT_DATA_BACKUP.md on-client/docs/evidence
 
-# 2) 학생 파일만 골라 저장점(커밋) 만들기
-git add on-client/student/extension.mjs on-client/docs/STUDENT_GUIDE.md
-git commit -m "보안 Agent 저장점"
-
-# 3) 원격(GitHub)에 백업
-git push
-
-# 4) 백업된 커밋 번호 기록
-git rev-parse HEAD
+# 2) 전체 변경 보기 (대상 밖 변경이 섞여 있는지 확인)
+git status --short
 ```
 
-**확인함**: 13~21단계 결과를 이 방식(학생 파일 add → commit → push → 커밋 번호 확인)으로 GitHub 에 저장하고, 원격에 올라간 커밋 번호로 ALEPH 에 제출했습니다(예: 21단계 `c31ed8b409da09ca81b74ad67ffd372dbb075c26`).
+- 1) 에 나온 파일만 이번 백업에 넣습니다.
+- 2) 에만 나오고 1) 에 없는 파일(예: 원래 폴더에 남아 있는 커밋되지 않은 제공 파일 변경 `README.md`, `src/server.mjs` 등)은 학생 데이터가 아니므로 **넣지 않고 그대로 둡니다**. `git add .` 이나 `git add -A` 는 쓰지 않습니다.
+- `.env` 등 비밀 파일이 1)·2) 에 보이면 커밋하지 않습니다.
+
+### 2-3. 저장점 만들기와 원격 백업
+
+```powershell
+# 3) 백업 대상 전체를 경로로 지정해 담기 (바뀌지 않은 파일은 담겨도 변화 없음)
+git add -- on-client/student on-client/docs/STUDENT_GUIDE.md on-client/docs/REPRODUCTION_RECORD.md on-client/docs/STUDENT_DATA_BACKUP.md on-client/docs/evidence
+
+# 4) 담긴 파일이 백업 대상 안에만 있는지 확인
+git diff --cached --name-only
+
+# 5) 저장점(커밋) 만들기
+git commit -m "보안 Agent 저장점"
+
+# 6) 원격(GitHub)에 백업
+git push
+
+# 7) 백업 확인: 대상 안에 남은 변경이 없어야 하고, 로컬과 원격 커밋 번호가 같아야 함
+git status --short -- on-client/student on-client/docs/STUDENT_GUIDE.md on-client/docs/REPRODUCTION_RECORD.md on-client/docs/STUDENT_DATA_BACKUP.md on-client/docs/evidence
+git rev-parse HEAD
+git ls-remote origin HEAD
+```
+
+**확인함**: 13~21단계 결과를 학생 파일을 경로로 지정해 add → commit → push → 커밋 번호 확인하는 방식으로 GitHub 에 저장하고, 원격에 올라간 커밋 번호로 ALEPH 에 제출했습니다(예: 21단계 `c31ed8b409da09ca81b74ad67ffd372dbb075c26`, 22단계 문서 `39aa727e3b5c4e03c4fc76d2cad3f337d1e14d67`). 위 목록 전체를 한 번에 지정하는 3)·4)·7) 명령 그대로는 **미실행**입니다(지금까지는 단계마다 바뀐 학생 파일만 지정했음).
 
 ---
 

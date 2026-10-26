@@ -23,7 +23,8 @@
 | 시작 틀 버전 | 0.2.11 | `package.json` 의 `version`, `README.md` 제목 「내 보안 Agent 시작 틀 0.2.11」 |
 | 앱 주소 | http://127.0.0.1:5189 (이 PC 안에서만) | `src/server.mjs` 가 `127.0.0.1` 에서 대기 |
 | 실행 도구가 막는 환경 | Node.js 21 이하 또는 25 이상 (`지금 Node.js 는 vXX 입니다. 앱은 Node.js 22~24 에서 실행합니다.` 후 중단) | `tools/start-alekov.ps1` |
-| 확인하지 않은 환경 | macOS·Linux 실행, 다른 PC에서 접속, Node.js 22·23 에서의 실제 실행 (학생은 24.19.0 에서만 작업) | 미확인 |
+| 실제로 작업·재현한 환경 | Windows, Node.js **v24.21.0** (기준 24.19.0 은 아니지만 허용 범위 22~24 안) | `docs/REPRODUCTION_RECORD.md` 1장 |
+| 확인하지 않은 환경 | macOS·Linux 실행, 다른 PC에서 접속, Node.js 24.19.0·22·23 에서의 실제 실행 | 미확인 |
 
 ---
 
