@@ -1,0 +1,53 @@
+﻿
+[2026-10-26 15:10:25] script version: 3 (PSHOME=C:\Windows\System32\WindowsPowerShell\v1.0, PS 5.1.26100.9711)
+[2026-10-26 15:10:25] == 0. ORIGINAL FOLDER PRESERVED ==
+[2026-10-26 15:10:25] original extension.mjs exists: True
+[2026-10-26 15:10:25] original tracked changes: [ M on-client/.on-starter-manifest.json |  M on-client/README.md |  M on-client/docs/AI_SETUP_GUIDE.md |  M on-client/docs/CONNECTION_TROUBLESHOOT.md |  M on-client/docs/STUDENT_LAUNCH_GUIDE.md |  M on-client/package.json |  M on-client/public/ai-connect.mjs |  M on-client/public/app.js |  M on-client/src/ai/service.mjs |  M on-client/src/ai/vault-service.mjs |  M on-client/src/connection/manager.mjs |  M on-client/src/connection/native-login.mjs |  M on-client/src/engine/sdp-host.mjs |  M on-client/src/server.mjs |  M on-client/tools/prepare-native-host.ps1 |  M on-client/tools/start-alekov.ps1 |  M on-client/vendor/clco-http.mjs]
+[2026-10-26 15:10:26] original HEAD: c31ed8b409da09ca81b74ad67ffd372dbb075c26
+[2026-10-26 15:10:26] port 5199 already in use before start; stopping only that listener to start clean
+[2026-10-26 15:10:26] == 0b. FREE PORT: stop ==
+[2026-10-26 15:10:26] stop process 7116
+[2026-10-26 15:10:28] port 5199 listening after stop: False
+[2026-10-26 15:10:28] == 1. CLONE INTO NEW EMPTY FOLDER ==
+[2026-10-26 15:10:28] new folder: C:\kesheb-repro-20261026-151025 (existed before: False)
+[2026-10-26 15:10:28] git: Cloning into 'C:\kesheb-repro-20261026-151025'...
+[2026-10-26 15:10:29] cloned branch: master commit: c31ed8b409da09ca81b74ad67ffd372dbb075c26
+[2026-10-26 15:10:29] .env present in clone: False
+[2026-10-26 15:10:29] student/extension.mjs SHA256: 6B5955947D8B054F32F5FCBA11CBE028AD5B60376BB40E387C121A3FEB30BE38
+[2026-10-26 15:10:29] == 2. RUNTIME CHECK ==
+[2026-10-26 15:10:29] node path: C:\Program Files\nodejs\node.exe
+[2026-10-26 15:10:30] node --version: v24.21.0
+[2026-10-26 15:10:30] node --check student/extension.mjs exit=0 output=[]
+[2026-10-26 15:10:30] == 3. FIRST START: start-alekov.ps1 -Port 5199 -Background ==
+[2026-10-26 15:10:30] powershell path: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe (exists: True)
+[2026-10-26 15:10:31] start-alekov exit code: 0
+[2026-10-26 15:10:32] port 5199 listening: True
+[2026-10-26 15:10:32] -- first start: HTTP check http://127.0.0.1:5199 --
+[2026-10-26 15:10:32] GET / -> 200 <!doctype html> <html lang="ko"> <head> <meta charset="utf-8"> <meta name="viewport" content="width=device-width, initial-scale=1"> <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'"> <meta name="referrer" content="no-referrer"> <title>케셰브 · ZTNA &am...
+[2026-10-26 15:10:32] GET /student/extension.mjs -> 200 // 이 파일은 학생이 같은 프로젝트에서 이어서 구현합니다. // 제공 UI를 받은 것만으로 단계 완료를 인정하지 않습니다. // ---- 13단계: 로그인·기기·세션 상태 (renderIdentity) ---- const MODE_LABEL = { demo: '예제 자료', disconnected: '연결 없음', unknown: '확인 불가' }; const DEVICE_LABEL = { compliant: '보안 기준 충족', noncompliant: '보안 기준 미충족', unknown: '확인 불가' }; const SESSION_LABEL = { active: '활성', expired: '만료', revoked: '철회됨', unknown: '확인 불가' }; function node(tag, t...
+[2026-10-26 15:10:32] GET /api/me -> 503 {"ok":false,"error":{"code":"ENGINE_NOT_CONNECTED","message":"기존 서버·에이전트의 연결을 확인할 수 없습니다. 연결 어댑터를 먼저 확인하세요.","retryable":true},"meta":{"mode":"disconnected","checkedAt":"2026-10-26T06:10:32.316Z","starterVersion":"0.1.0"}}
+[2026-10-26 15:10:32] GET /api/devices -> 503 {"ok":false,"error":{"code":"ENGINE_NOT_CONNECTED","message":"기존 서버·에이전트의 연결을 확인할 수 없습니다. 연결 어댑터를 먼저 확인하세요.","retryable":true},"meta":{"mode":"disconnected","checkedAt":"2026-10-26T06:10:32.336Z","starterVersion":"0.1.0"}}
+[2026-10-26 15:10:32] GET /api/sessions -> 503 {"ok":false,"error":{"code":"ENGINE_NOT_CONNECTED","message":"기존 서버·에이전트의 연결을 확인할 수 없습니다. 연결 어댑터를 먼저 확인하세요.","retryable":true},"meta":{"mode":"disconnected","checkedAt":"2026-10-26T06:10:32.387Z","starterVersion":"0.1.0"}}
+[2026-10-26 15:10:32] GET /api/apps -> 503 {"ok":false,"error":{"code":"ENGINE_NOT_CONNECTED","message":"기존 서버·에이전트의 연결을 확인할 수 없습니다. 연결 어댑터를 먼저 확인하세요.","retryable":true},"meta":{"mode":"disconnected","checkedAt":"2026-10-26T06:10:32.436Z","starterVersion":"0.1.0"}}
+[2026-10-26 15:10:32] GET /api/events -> 503 {"ok":false,"error":{"code":"ENGINE_NOT_CONNECTED","message":"기존 서버·에이전트의 연결을 확인할 수 없습니다. 연결 어댑터를 먼저 확인하세요.","retryable":true},"meta":{"mode":"disconnected","checkedAt":"2026-10-26T06:10:32.484Z","starterVersion":"0.1.0"}}
+[2026-10-26 15:10:32] GET /api/diagnostics -> 200 {"ok":true,"data":{"requestId":"dd48d1ff-4837-4de8-b115-ce4f15f88204","component":"on-client","version":"0.1.0","engine":{"mode":"disconnected","code":"ENGINE_NOT_CONNECTED"},"ai":{"configured":false,"authorized":false,"authorizationRequired":true},"checkedAt":"2026-10-26T06:10:32.533Z","workbenchRequiredAtRuntime":false},"meta":{"mode":"disconnected","checkedAt":"2026-10-26T06:10:32.533Z","starte...
+[2026-10-26 15:10:32] GET /api/vulnerabilities -> 200 {"ok":true,"data":{"status":"not_configured","code":"PROJECT_NOT_CONFIGURED","checkedAt":"2026-10-26T06:10:32.581Z","packages":[]},"meta":{"mode":"disconnected","checkedAt":"2026-10-26T06:10:32.581Z","starterVersion":"0.1.0"}}
+[2026-10-26 15:10:32] == 4. STOP: stop ==
+[2026-10-26 15:10:32] stop process 17772
+[2026-10-26 15:10:34] port 5199 listening after stop: False
+[2026-10-26 15:10:34] == 5. RESTART: start-alekov.ps1 -Port 5199 -Background ==
+[2026-10-26 15:10:34] powershell path: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe (exists: True)
+[2026-10-26 15:10:35] start-alekov exit code: 0
+[2026-10-26 15:10:36] port 5199 listening: True
+[2026-10-26 15:10:36] -- restart: HTTP check http://127.0.0.1:5199 --
+[2026-10-26 15:10:37] GET / -> 200 <!doctype html> <html lang="ko"> <head> <meta charset="utf-8"> <meta name="viewport" content="width=device-width, initial-scale=1"> <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'"> <meta name="referrer" content="no-referrer"> <title>케셰브 · ZTNA &am...
+[2026-10-26 15:10:37] GET /student/extension.mjs -> 200 // 이 파일은 학생이 같은 프로젝트에서 이어서 구현합니다. // 제공 UI를 받은 것만으로 단계 완료를 인정하지 않습니다. // ---- 13단계: 로그인·기기·세션 상태 (renderIdentity) ---- const MODE_LABEL = { demo: '예제 자료', disconnected: '연결 없음', unknown: '확인 불가' }; const DEVICE_LABEL = { compliant: '보안 기준 충족', noncompliant: '보안 기준 미충족', unknown: '확인 불가' }; const SESSION_LABEL = { active: '활성', expired: '만료', revoked: '철회됨', unknown: '확인 불가' }; function node(tag, t...
+[2026-10-26 15:10:37] GET /api/me -> 503 {"ok":false,"error":{"code":"ENGINE_NOT_CONNECTED","message":"기존 서버·에이전트의 연결을 확인할 수 없습니다. 연결 어댑터를 먼저 확인하세요.","retryable":true},"meta":{"mode":"disconnected","checkedAt":"2026-10-26T06:10:37.115Z","starterVersion":"0.1.0"}}
+[2026-10-26 15:10:37] GET /api/devices -> 503 {"ok":false,"error":{"code":"ENGINE_NOT_CONNECTED","message":"기존 서버·에이전트의 연결을 확인할 수 없습니다. 연결 어댑터를 먼저 확인하세요.","retryable":true},"meta":{"mode":"disconnected","checkedAt":"2026-10-26T06:10:37.129Z","starterVersion":"0.1.0"}}
+[2026-10-26 15:10:37] GET /api/sessions -> 503 {"ok":false,"error":{"code":"ENGINE_NOT_CONNECTED","message":"기존 서버·에이전트의 연결을 확인할 수 없습니다. 연결 어댑터를 먼저 확인하세요.","retryable":true},"meta":{"mode":"disconnected","checkedAt":"2026-10-26T06:10:37.143Z","starterVersion":"0.1.0"}}
+[2026-10-26 15:10:37] GET /api/apps -> 503 {"ok":false,"error":{"code":"ENGINE_NOT_CONNECTED","message":"기존 서버·에이전트의 연결을 확인할 수 없습니다. 연결 어댑터를 먼저 확인하세요.","retryable":true},"meta":{"mode":"disconnected","checkedAt":"2026-10-26T06:10:37.162Z","starterVersion":"0.1.0"}}
+[2026-10-26 15:10:37] GET /api/events -> 503 {"ok":false,"error":{"code":"ENGINE_NOT_CONNECTED","message":"기존 서버·에이전트의 연결을 확인할 수 없습니다. 연결 어댑터를 먼저 확인하세요.","retryable":true},"meta":{"mode":"disconnected","checkedAt":"2026-10-26T06:10:37.176Z","starterVersion":"0.1.0"}}
+[2026-10-26 15:10:37] GET /api/diagnostics -> 200 {"ok":true,"data":{"requestId":"10e57751-3732-411d-878a-4b88af64afa9","component":"on-client","version":"0.1.0","engine":{"mode":"disconnected","code":"ENGINE_NOT_CONNECTED"},"ai":{"configured":false,"authorized":false,"authorizationRequired":true},"checkedAt":"2026-10-26T06:10:37.190Z","workbenchRequiredAtRuntime":false},"meta":{"mode":"disconnected","checkedAt":"2026-10-26T06:10:37.190Z","starte...
+[2026-10-26 15:10:37] GET /api/vulnerabilities -> 200 {"ok":true,"data":{"status":"not_configured","code":"PROJECT_NOT_CONFIGURED","checkedAt":"2026-10-26T06:10:37.207Z","packages":[]},"meta":{"mode":"disconnected","checkedAt":"2026-10-26T06:10:37.207Z","starterVersion":"0.1.0"}}
+[2026-10-26 15:10:37] == 6. App left running at http://127.0.0.1:5199 for screen check. ==
+[2026-10-26 15:10:37] == END ==
