@@ -12,9 +12,10 @@
 | 저장소 | https://github.com/sby1234-ai/kesheb-defense |
 | 브랜치 | `master` |
 | 재현한 커밋 | `c31ed8b409da09ca81b74ad67ffd372dbb075c26` (21단계 통과 커밋) |
-| 재현한 학생 코드 지문 | `student/extension.mjs` SHA256 `6B5955947D8B054F32F5FCBA11CBE028AD5B60376BB40E387C121A3FEB30BE38` |
+| 학생 코드 지문 (저장소 원문) | `student/extension.mjs` Git blob `6a9d3961d16b8d662fd6cfa1c09d6dbd32bc1a93` · 커밋된 파일 바이트(LF) SHA256 `1af44c46c2e66cf3097c792dd2e1e3f44b4ef0220c3d71aa2f91535c37f40ba0` — 재현 커밋 `c31ed8b…` 과 22단계 제출 커밋에서 같음 |
+| 학생 코드 지문 (Windows 재현 폴더의 작업 파일) | SHA256 `6B5955947D8B054F32F5FCBA11CBE028AD5B60376BB40E387C121A3FEB30BE38` (재현 로그 원문). Windows 에서 clone 할 때 Git 이 줄바꿈을 CRLF 로 바꿔 쓴 파일의 지문이라 저장소 원문(LF) 지문과 값이 다릅니다. 같은 원문을 CRLF 로 바꿔 계산하면 이 값과 일치합니다(내용 차이 아님) |
 
-**같은 최종 소스 기준**: 22단계 제출 커밋은 위 재현 커밋에서 **문서만** 바뀌었습니다. 코드·설정·실행 도구(`student/`, `src/`, `public/`, `tools/`, `package.json`, `.env.example`)는 바뀌지 않았습니다. 바뀐 문서: 이 문서(`docs/REPRODUCTION_RECORD.md`), 재현 로그 원본(`docs/evidence/repro-log-20261026-151025.txt`), 학생 데이터 백업·복원 절차(`docs/STUDENT_DATA_BACKUP.md`), 21단계 설명서의 시작 틀 버전 표기 정정(`docs/STUDENT_GUIDE.md`, 0.2.14 → 실제 원문 값 0.2.11). 확인 명령: `git diff --stat c31ed8b HEAD -- on-client/student on-client/src on-client/public on-client/tools on-client/package.json` → 출력 없음이어야 합니다. 서로 다른 커밋의 결과를 합쳐 쓰지 않았습니다.
+**같은 최종 소스 기준**: 22단계 제출 커밋은 위 재현 커밋에서 **문서만** 바뀌었습니다. 코드·설정·실행 도구(`student/`, `src/`, `public/`, `tools/`, `package.json`, `.env.example`)는 바뀌지 않았습니다. 바뀐 문서: 이 문서(`docs/REPRODUCTION_RECORD.md`), 재현 로그 원본(`docs/evidence/repro-log-20261026-151025.txt`), 학생 데이터 백업·복원 절차(`docs/STUDENT_DATA_BACKUP.md`), 21단계 설명서 정정(`docs/STUDENT_GUIDE.md`: 시작 틀 버전 0.2.14 → 실제 원문 값 0.2.11, 실제 작업·재현 Node 환경 v24.21.0 명시). 확인 명령: `git diff --stat c31ed8b HEAD -- on-client/student on-client/src on-client/public on-client/tools on-client/package.json` → 출력 없음이어야 하고, `git rev-parse c31ed8b:on-client/student/extension.mjs` 와 `git rev-parse HEAD:on-client/student/extension.mjs` 가 둘 다 `6a9d3961…` 로 같아야 합니다. 지문은 줄바꿈 변환의 영향을 받지 않는 Git blob 값으로 대조합니다. 서로 다른 커밋의 결과를 합쳐 쓰지 않았습니다.
 
 **증거**: 2·3장의 명령 결과와 시각은 재현 스크립트가 남긴 로그 원본 `docs/evidence/repro-log-20261026-151025.txt` 에 있습니다(비밀 값 없음). 4장의 화면 문구는 같은 앱 화면을 브라우저에서 읽은 기록입니다.
 

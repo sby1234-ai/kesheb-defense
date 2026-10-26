@@ -91,7 +91,8 @@ git checkout c31ed8b409da09ca81b74ad67ffd372dbb075c26
 
 # 3) 복원 확인: 커밋 번호와 학생 코드 지문 대조
 git rev-parse HEAD
-Get-FileHash .\on-client\student\extension.mjs -Algorithm SHA256
+git rev-parse HEAD:on-client/student/extension.mjs   # 저장소 원문 지문(Git blob). 줄바꿈 변환과 무관
+Get-FileHash .\on-client\student\extension.mjs -Algorithm SHA256   # 작업 파일 지문. Windows 에서는 CRLF 로 바뀐 파일 기준이라 원문(LF) SHA256 과 다를 수 있음
 
 # 4) 실행 확인 (docs/STUDENT_GUIDE.md 2장)
 cd on-client
@@ -99,7 +100,7 @@ node --check student/extension.mjs
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\start-alekov.ps1
 ```
 
-**확인함 (1·3·4)**: 22단계 재현에서 `C:\kesheb-repro-20261026-151025` 로 clone 해 커밋 `c31ed8b…`, `student/extension.mjs` SHA256 `6B5955947D8B054F32F5FCBA11CBE028AD5B60376BB40E387C121A3FEB30BE38` 를 확인하고 실행·종료·재실행까지 했습니다(`docs/REPRODUCTION_RECORD.md`, 로그 원본 `docs/evidence/repro-log-20261026-151025.txt`).
+**확인함 (1·3·4)**: 22단계 재현에서 `C:\kesheb-repro-20261026-151025` 로 clone 해 커밋 `c31ed8b…`, `student/extension.mjs` 작업 파일 SHA256 `6B5955947D8B054F32F5FCBA11CBE028AD5B60376BB40E387C121A3FEB30BE38`(CRLF 로 바뀐 Windows 작업 파일 기준, 저장소 원문 blob `6a9d3961…` 과 같은 내용) 를 확인하고 실행·종료·재실행까지 했습니다(`docs/REPRODUCTION_RECORD.md`, 로그 원본 `docs/evidence/repro-log-20261026-151025.txt`).
 **미실행 (2)**: `git checkout <커밋>` 으로 과거 커밋 이동은 이번에 하지 않았습니다(clone 직후 HEAD 가 이미 대상 커밋이었음).
 
 ### 3-2. 학생 파일 하나만 되돌리기
