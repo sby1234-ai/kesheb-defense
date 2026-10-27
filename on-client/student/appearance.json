@@ -1,5 +1,8 @@
 {
   "schema": "alekov.student-appearance.v1",
+  "appName": "케셰브",
+  "icon": "brand-icon.png",
+  "startPicture": "start-picture.webp",
   "palette": { "accent": "#5b4bdb", "background": "#e8ebf4", "surface": "#ffffff" },
   "dashboardPreset": "student-first"
 }

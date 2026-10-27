@@ -1030,7 +1030,7 @@ function pcPanel(extra) {
 }
 
 function pcGrid(min, gap = '12px') {
-  return css(node('div'), { display: 'grid', gridTemplateColumns: `repeat(auto-fit, minmax(${min}px, 1fr))`, gap });
+  return css(node('div'), { display: 'grid', gridTemplateColumns: `repeat(auto-fit, minmax(min(${min}px, 100%), 1fr))`, gap });
 }
 
 function pcSectionTitle(text, note) {
@@ -1463,6 +1463,19 @@ function createPcDashboard({ api, onChange }) {
     return panel;
   }
 
+  // 아래 제공 카드 「내 PC 상태」와의 관계를 밝힌다(제공 기능과 학생 구현의 구분).
+  function renderRelation() {
+    const note = css(node('div', undefined, 'student-pc-relation'), { marginTop: '20px', padding: '14px 16px', borderRadius: '12px', border: `1px dashed ${UI.line}`,
+      display: 'flex', gap: '12px', alignItems: 'flex-start' });
+    note.append(pcText('span', 'ⓘ', { color: UI.muted, fontSize: '1rem', lineHeight: '1.4' }));
+    const body = css(node('div'), { minWidth: '0' });
+    body.append(pcText('p', '제공 카드와의 관계', { margin: '0 0 4px', fontSize: '0.82rem', fontWeight: '700', color: UI.text }));
+    body.append(pcText('p', '아래 흰 카드 「내 PC 상태」는 시작 틀이 제공하는 원래 기능입니다. 이 대시보드는 같은 실측 경로(/api/pc/status)의 값을 받아 판정 기준·종합 상태·추이·기록을 더한 학생 구현입니다. 두 화면은 각자 조회하므로, 조회한 시각이 다르면 값이 다를 수 있습니다.',
+      { margin: '0', fontSize: '0.8rem', color: UI.muted, lineHeight: '1.6', maxWidth: '72ch' }));
+    note.append(body);
+    return note;
+  }
+
   function render(statusInput) {
     const box = node('section', undefined, 'student-pc-dashboard');
     box.setAttribute('aria-label', '내 PC 관제 대시보드');
@@ -1477,7 +1490,7 @@ function createPcDashboard({ api, onChange }) {
     box.append(renderHero(latest, stale), renderStatusLine(latest, stale));
     if (state.lastError) box.append(renderError(Boolean(latest)));
     if (!latest) {
-      box.append(pcLinkRow([sdp], null, false));
+      box.append(pcLinkRow([sdp], null, false), renderRelation());
       restoreFocus();
       return box;
     }
@@ -1495,7 +1508,7 @@ function createPcDashboard({ api, onChange }) {
     box.append(pcSectionTitle('추이와 기록'));
     const bottom = pcGrid(340, '14px');
     bottom.append(renderTrend(), renderLog());
-    box.append(bottom);
+    box.append(bottom, renderRelation());
     restoreFocus();
     return box;
   }
