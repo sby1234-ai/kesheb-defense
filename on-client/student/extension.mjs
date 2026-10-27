@@ -852,6 +852,12 @@ const PC_REASON = {
   invalid_response: '응답 값을 확인할 수 없습니다(invalid_response).',
   invalid_sample: 'CPU 측정 표본을 확인할 수 없습니다(invalid_sample).',
 };
+// 방화벽 프로필별 의미(Windows 네트워크 위치 기준). 꺼진 프로필에만 붙인다.
+const PC_FW_MEANING = {
+  Domain: 'Domain 꺼짐: 회사 도메인에 붙은 네트워크에서 들어오는 연결을 막지 않습니다.',
+  Private: 'Private 꺼짐: 집·신뢰하는 네트워크에서 같은 망의 다른 기기 접속을 막지 않습니다.',
+  Public: 'Public 꺼짐: 공용 Wi-Fi 같은 신뢰하지 않는 네트워크에서도 막지 않아 노출 위험이 가장 큽니다.',
+};
 const GB = 1024 ** 3;
 const isNum = v => typeof v === 'number' && Number.isFinite(v) && v >= 0;
 const isCount = v => Number.isSafeInteger(v) && v >= 0;
@@ -904,10 +910,51 @@ function pcCards(metrics) {
     const off = names.filter(n => fw.profiles.find(p => p.name === n).enabled === false);
     cards.push({ title: '방화벽', state: off.length ? '주의' : '정상',
       value: names.map(n => `${n} ${fw.profiles.find(p => p.name === n).enabled ? '켜짐' : '꺼짐'}`).join(' · '), percent: null,
-      detail: off.length ? `꺼진 프로필: ${off.join(', ')}. 앱은 설정을 읽기만 하고 바꾸지 않습니다.` : '세 프로필 모두 켜짐. 보호 전체의 안전 판정은 아닙니다.' });
+      detail: off.length ? `꺼진 프로필: ${off.join(', ')}. 앱은 설정을 읽기만 하고 바꾸지 않습니다.` : '세 프로필 모두 켜짐. 보호 전체의 안전 판정은 아닙니다.',
+      notes: off.map(n => PC_FW_MEANING[n]) });
   } else cards.push(unavailable('방화벽', fw));
 
   return cards;
+}
+
+// 「연결과 기록」 줄: 네트워크·Windows 기록(PC 실측)과 SDP 서버(앱 연결 상태)는 서로 다른 출처다.
+function pcNetworkCard(metrics) {
+  const n = metrics && metrics.network;
+  if (n && n.state === 'ok' && isCount(n.interfaceCount) && isCount(n.ipv4Count)) {
+    const none = n.ipv4Count === 0;
+    return { title: '네트워크', state: none ? '주의' : '정상', value: `인터페이스 ${n.interfaceCount}개 · IPv4 구성 ${n.ipv4Count}개`,
+      detail: none ? 'IPv4 구성이 없습니다. 네트워크에 연결되지 않았을 수 있습니다.' : '로컬 네트워크 구성만 읽었습니다. 인터넷 접속이나 ZTNA 허용을 확인한 결과는 아닙니다.' };
+  }
+  return { title: '네트워크', state: '확인 불가', value: '확인 불가', detail: pcReason(n) };
+}
+
+function pcEventCounts(metrics) {
+  const e = metrics && metrics.events;
+  return e && e.state === 'ok' && isCount(e.warningCount) && isCount(e.errorCount)
+    ? { warning: e.warningCount, error: e.errorCount, truncated: e.truncated === true } : null;
+}
+
+function pcEventsCard(metrics, previous) {
+  const now = pcEventCounts(metrics);
+  if (!now) return { title: 'Windows 기록', state: '확인 불가', value: '확인 불가', detail: pcReason(metrics && metrics.events) };
+  let change = '직전 측정이 없어 증감을 비교하지 않았습니다.';
+  let rising = false;
+  if (previous) {
+    const dw = now.warning - previous.warning, de = now.error - previous.error;
+    rising = de > 0;
+    change = `직전 측정 대비 경고 ${dw >= 0 ? '+' : ''}${dw}건 · 오류 ${de >= 0 ? '+' : ''}${de}건${rising ? ' (▲ 오류 증가)' : ''}`;
+  }
+  return { title: 'Windows 기록', state: '관찰', rising,
+    value: `최근 24시간 경고 ${now.warning}건 · 오류 ${now.error}건${now.truncated ? ' (일부 집계: 5,000건 초과)' : ''}`,
+    detail: `${change}. System·Application 기록의 건수만 읽습니다. 침해나 공격을 탐지한 결과가 아니며, 건수만으로 정상·주의를 판정하지 않습니다.` };
+}
+
+// SDP 서버 연결은 제공 화면이 넘겨준 연결 상태(mode)로만 표시한다. PC 실측 성공과 섞지 않는다.
+function pcSdpCard(mode) {
+  if (mode === 'connected') return { title: 'SDP 서버', state: '연결됨', value: 'SDP 연결됨', detail: '앱이 기존 접속·XDR 서버에 연결된 상태라고 알려 왔습니다.' };
+  if (mode === 'disconnected') return { title: 'SDP 서버', state: '미연결', value: 'SDP 미연결', detail: '기존 접속·XDR 서버에 연결되지 않았습니다. 위 PC 실측 성공과는 별개입니다.' };
+  if (mode === 'demo') return { title: 'SDP 서버', state: '예제 자료', value: '예제 자료(demo)', detail: '예제 모드입니다. 실제 SDP 연결이 아닙니다.' };
+  return { title: 'SDP 서버', state: '확인 불가', value: '확인 불가', detail: `앱이 연결 상태를 확인할 수 있는 값을 보내지 않았습니다(mode: ${mode == null ? '없음' : String(mode)}). 미연결로 단정하지 않습니다.` };
 }
 
 function pcEventsText(metrics) {
@@ -965,8 +1012,24 @@ function pcDelta(history, title) {
   return `${title}: 직전 측정 대비 ${d >= 0 ? '+' : ''}${d.toFixed(1)}%p`;
 }
 
+function pcLinkRow(cards, measuredAt, stale) {
+  const row = node('div', undefined, 'student-pc-links');
+  row.append(node('h5', '연결과 기록'));
+  for (const card of cards) {
+    const article = node('article', undefined, 'student-pc-card');
+    const isPc = card.title !== 'SDP 서버';
+    const shown = isPc && stale && card.state !== '확인 불가' ? '오래됨' : card.state;
+    article.dataset.pcState = shown;
+    const mark = { 정상: '● ', 주의: '▲ ', 관찰: '◆ ', 오래됨: '◷ ', 연결됨: '● ', 미연결: '○ ', '예제 자료': '◇ ' }[shown] || '? ';
+    article.append(node('h5', card.title), node('p', `${mark}${shown}${card.rising && !stale ? ' · ▲ 오류 증가' : ''}`), node('p', card.value), node('p', card.detail));
+    article.append(node('p', isPc ? `출처: 이 PC 실측${measuredAt ? ` · 측정 시각: ${fmtTime(measuredAt)}` : ''}` : '출처: 앱의 SDP 연결 상태(PC 실측과 별개)'));
+    row.append(article);
+  }
+  return row;
+}
+
 function createPcDashboard({ api, onChange }) {
-  const state = { history: [], pending: false, lastError: null, auto: false, timer: null, staleTimer: null };
+  const state = { history: [], pending: false, lastError: null, auto: false, timer: null, staleTimer: null, filter: 'all' };
   const changed = () => { if (typeof onChange === 'function') onChange(); };
 
   function stopAuto() { if (state.timer !== null) clearTimeout(state.timer); state.timer = null; }
@@ -999,7 +1062,9 @@ function createPcDashboard({ api, onChange }) {
     const sample = pcSampleFrom(result);
     if (sample) {
       state.lastError = null;
-      state.history.push({ measuredAt: sample.measuredAt, cards: pcCards(sample.metrics), events: pcEventsText(sample.metrics) });
+      const prev = state.history.length ? state.history[state.history.length - 1].eventCounts : null;
+      state.history.push({ measuredAt: sample.measuredAt, cards: pcCards(sample.metrics), events: pcEventsText(sample.metrics),
+        network: pcNetworkCard(sample.metrics), eventsCard: pcEventsCard(sample.metrics, prev), eventCounts: pcEventCounts(sample.metrics) });
       if (state.history.length > PC_HISTORY_MAX) state.history.shift();
       scheduleStale();
     } else {
@@ -1010,7 +1075,7 @@ function createPcDashboard({ api, onChange }) {
     scheduleAuto();
   }
 
-  function render() {
+  function render(statusInput) {
     const box = node('section', undefined, 'student-pc-dashboard');
     box.append(node('h4', '내 PC 관제 대시보드 (학생 구현)'));
     box.append(node('p', '값은 제공 「내 PC 상태」와 같은 실측 경로(/api/pc/status, 출처 local-pc)에서 읽습니다. 예시 값은 쓰지 않습니다. 상태 판단·추이·기록은 학생이 더한 부분입니다.'));
@@ -1040,8 +1105,10 @@ function createPcDashboard({ api, onChange }) {
     }
 
     const latest = state.history[state.history.length - 1];
+    const sdp = pcSdpCard(statusInput && statusInput.mode);
     if (!latest) {
       box.append(node('p', '아직 실측하지 않았습니다. 「내 PC 실측 기록」을 누르면 이 PC의 값을 읽습니다.'));
+      box.append(pcLinkRow([sdp], null));
       return box;
     }
 
@@ -1062,11 +1129,13 @@ function createPcDashboard({ api, onChange }) {
         node('p', `${mark}${shown}`),
         node('p', card.value),
         node('p', card.detail),
-        node('p', `측정 시각: ${fmtTime(latest.measuredAt)}`),
       );
+      for (const extra of card.notes || []) article.append(node('p', extra));
+      article.append(node('p', `측정 시각: ${fmtTime(latest.measuredAt)}`));
       grid.append(article);
     }
     box.append(grid);
+    box.append(pcLinkRow([latest.network, latest.eventsCard, sdp], latest.measuredAt, stale));
 
     const trend = node('div', undefined, 'student-pc-trend');
     trend.append(node('h5', `추이 (앱을 켠 뒤 측정 ${state.history.length}회, 최대 ${PC_HISTORY_MAX}회)`));
@@ -1078,10 +1147,28 @@ function createPcDashboard({ api, onChange }) {
 
     const log = node('div', undefined, 'student-pc-log');
     log.append(node('h5', '최근 기록 (새 기록이 위)'));
+    const filters = node('div', undefined, 'student-pc-filter');
+    for (const [key, text] of [['all', '전체'], ['warn', '주의만'], ['unavailable', '확인 불가만']]) {
+      const f = node('button', state.filter === key ? `${text} (선택됨)` : text);
+      f.type = 'button';
+      f.setAttribute('aria-pressed', state.filter === key ? 'true' : 'false');
+      f.addEventListener('click', () => { state.filter = key; changed(); });
+      filters.append(f);
+    }
+    log.append(filters);
+    const matches = sample => {
+      const all = [...sample.cards, sample.network].filter(Boolean);
+      if (state.filter === 'warn') return all.some(c => c.state === '주의') || (sample.eventsCard && sample.eventsCard.rising);
+      if (state.filter === 'unavailable') return all.some(c => c.state === '확인 불가') || (sample.eventsCard && sample.eventsCard.state === '확인 불가');
+      return true;
+    };
+    const shownSamples = [...state.history].reverse().filter(matches);
+    if (!shownSamples.length) log.append(node('p', state.filter === 'warn' ? '주의에 해당하는 기록이 없습니다.' : '확인 불가에 해당하는 기록이 없습니다.'));
     const list = node('ul');
-    for (const sample of [...state.history].reverse()) {
+    for (const sample of shownSamples) {
       const parts = sample.cards.map(c => `${c.title} ${c.state === '확인 불가' ? '확인 불가' : c.value} [${c.state}]`);
-      list.append(node('li', `${fmtTime(sample.measuredAt)} · ${parts.join(' · ')} · Windows 기록(최근 24시간) ${sample.events}`));
+      const net = sample.network ? ` · 네트워크 ${sample.network.value} [${sample.network.state}]` : '';
+      list.append(node('li', `${fmtTime(sample.measuredAt)} · ${parts.join(' · ')}${net} · Windows 기록(최근 24시간) ${sample.events}${sample.eventsCard && sample.eventsCard.rising ? ' ▲ 오류 증가' : ''}`));
     }
     log.append(list);
     box.append(log);
@@ -1099,7 +1186,7 @@ export function createStudentView({ api, onChange } = {}) {
     renderEvents(input) { return renderEventsView(input); },
     renderStatus(input) {
       const wrap = node('div', undefined, 'student-status-with-pc');
-      wrap.append(pcDashboard.render(), renderStatusView(input));
+      wrap.append(pcDashboard.render(input), renderStatusView(input));
       return wrap;
     },
     renderVulnerabilities(input) { return renderVulnerabilitiesView(input); },
