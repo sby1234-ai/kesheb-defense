@@ -884,6 +884,7 @@ function pcCards(metrics) {
   if (cpu && cpu.state === 'ok' && isNum(cpu.usagePercent) && cpu.usagePercent <= 100) {
     const warn = cpu.usagePercent >= PC_LIMITS.cpuPercent;
     cards.push({ title: 'CPU', state: warn ? '주의' : '정상', value: `${cpu.usagePercent.toFixed(1)}% 사용`, percent: cpu.usagePercent,
+      big: `${cpu.usagePercent.toFixed(1)}%`, meter: cpu.usagePercent, sub: '사용률',
       detail: `${isNum(cpu.sampleMs) ? cpu.sampleMs : 200}ms 구간 실측. 기준: ${PC_LIMITS.cpuPercent}% 이상이면 주의.` });
   } else cards.push(unavailable('CPU', cpu));
 
@@ -892,6 +893,7 @@ function pcCards(metrics) {
     const pct = (mem.usedBytes / mem.totalBytes) * 100;
     const warn = pct >= PC_LIMITS.memoryPercent;
     cards.push({ title: '메모리', state: warn ? '주의' : '정상', value: `${fmtGb(mem.usedBytes)} / ${fmtGb(mem.totalBytes)} (${pct.toFixed(1)}% 사용)`, percent: pct,
+      big: `${pct.toFixed(1)}%`, meter: pct, sub: `${fmtGb(mem.usedBytes)} / ${fmtGb(mem.totalBytes)}`,
       detail: `기준: 사용률 ${PC_LIMITS.memoryPercent}% 이상이면 주의.` });
   } else cards.push(unavailable('메모리', mem));
 
@@ -900,6 +902,7 @@ function pcCards(metrics) {
     const freePct = (disk.freeBytes / disk.totalBytes) * 100;
     const warn = freePct < PC_LIMITS.diskFreePercent;
     cards.push({ title: '디스크', state: warn ? '주의' : '정상', value: `${fmtGb(disk.freeBytes)} 여유 / ${fmtGb(disk.totalBytes)} (여유 ${freePct.toFixed(1)}%)`, percent: null,
+      big: `${freePct.toFixed(1)}%`, meter: 100 - freePct, sub: `여유 · ${fmtGb(disk.freeBytes)} / ${fmtGb(disk.totalBytes)} (원 = 사용 중)`,
       detail: `앱이 있는 디스크 기준. 기준: 여유 ${PC_LIMITS.diskFreePercent}% 미만이면 주의.` });
   } else cards.push(unavailable('디스크', disk));
 
@@ -908,7 +911,7 @@ function pcCards(metrics) {
   if (fw && fw.state === 'ok' && Array.isArray(fw.profiles) && fw.profiles.length === 3
       && names.every(n => fw.profiles.some(p => p && p.name === n && typeof p.enabled === 'boolean'))) {
     const off = names.filter(n => fw.profiles.find(p => p.name === n).enabled === false);
-    cards.push({ title: '방화벽', state: off.length ? '주의' : '정상',
+    cards.push({ title: '방화벽', state: off.length ? '주의' : '정상', big: `${3 - off.length} / 3`, sub: '켜진 프로필',
       value: names.map(n => `${n} ${fw.profiles.find(p => p.name === n).enabled ? '켜짐' : '꺼짐'}`).join(' · '), percent: null,
       detail: off.length ? `꺼진 프로필: ${off.join(', ')}. 앱은 설정을 읽기만 하고 바꾸지 않습니다.` : '세 프로필 모두 켜짐. 보호 전체의 안전 판정은 아닙니다.',
       notes: off.map(n => PC_FW_MEANING[n]) });
@@ -923,6 +926,7 @@ function pcNetworkCard(metrics) {
   if (n && n.state === 'ok' && isCount(n.interfaceCount) && isCount(n.ipv4Count)) {
     const none = n.ipv4Count === 0;
     return { title: '네트워크', state: none ? '주의' : '정상', value: `인터페이스 ${n.interfaceCount}개 · IPv4 구성 ${n.ipv4Count}개`,
+      big: `${n.ipv4Count}`, sub: `IPv4 구성 · 인터페이스 ${n.interfaceCount}개`,
       detail: none ? 'IPv4 구성이 없습니다. 네트워크에 연결되지 않았을 수 있습니다.' : '로컬 네트워크 구성만 읽었습니다. 인터넷 접속이나 ZTNA 허용을 확인한 결과는 아닙니다.' };
   }
   return { title: '네트워크', state: '확인 불가', value: '확인 불가', detail: pcReason(n) };
@@ -944,16 +948,16 @@ function pcEventsCard(metrics, previous) {
     rising = de > 0;
     change = `직전 측정 대비 경고 ${dw >= 0 ? '+' : ''}${dw}건 · 오류 ${de >= 0 ? '+' : ''}${de}건${rising ? ' (▲ 오류 증가)' : ''}`;
   }
-  return { title: 'Windows 기록', state: '관찰', rising,
+  return { title: 'Windows 기록', state: '관찰', rising, big: `${now.error}`, sub: `오류 · 경고 ${now.warning}건 (24시간)`,
     value: `최근 24시간 경고 ${now.warning}건 · 오류 ${now.error}건${now.truncated ? ' (일부 집계: 5,000건 초과)' : ''}`,
     detail: `${change}. System·Application 기록의 건수만 읽습니다. 침해나 공격을 탐지한 결과가 아니며, 건수만으로 정상·주의를 판정하지 않습니다.` };
 }
 
 // SDP 서버 연결은 제공 화면이 넘겨준 연결 상태(mode)로만 표시한다. PC 실측 성공과 섞지 않는다.
 function pcSdpCard(mode) {
-  if (mode === 'connected') return { title: 'SDP 서버', state: '연결됨', value: 'SDP 연결됨', detail: '앱이 기존 접속·XDR 서버에 연결된 상태라고 알려 왔습니다.' };
-  if (mode === 'disconnected') return { title: 'SDP 서버', state: '미연결', value: 'SDP 미연결', detail: '기존 접속·XDR 서버에 연결되지 않았습니다. 위 PC 실측 성공과는 별개입니다.' };
-  if (mode === 'demo') return { title: 'SDP 서버', state: '예제 자료', value: '예제 자료(demo)', detail: '예제 모드입니다. 실제 SDP 연결이 아닙니다.' };
+  if (mode === 'connected') return { title: 'SDP 서버', state: '연결됨', value: 'SDP 연결됨', big: 'SDP 연결됨', detail: '앱이 기존 접속·XDR 서버에 연결된 상태라고 알려 왔습니다.' };
+  if (mode === 'disconnected') return { title: 'SDP 서버', state: '미연결', value: 'SDP 미연결', big: 'SDP 미연결', detail: '기존 접속·XDR 서버에 연결되지 않았습니다. 위 PC 실측 성공과는 별개입니다.' };
+  if (mode === 'demo') return { title: 'SDP 서버', state: '예제 자료', value: '예제 자료(demo)', big: '예제 자료(demo)', detail: '예제 모드입니다. 실제 SDP 연결이 아닙니다.' };
   return { title: 'SDP 서버', state: '확인 불가', value: '확인 불가', detail: `앱이 연결 상태를 확인할 수 있는 값을 보내지 않았습니다(mode: ${mode == null ? '없음' : String(mode)}). 미연결로 단정하지 않습니다.` };
 }
 
@@ -965,38 +969,269 @@ function pcEventsText(metrics) {
   return `확인 불가 — ${pcReason(e)}`;
 }
 
-// CPU·메모리 사용률 추이(0~100%). 색만으로 구분하지 않게 선 모양(실선·점선)과 글자 범례를 함께 둔다.
+// ---- 4일차: 화면 다듬기 (관제실 테마, 디자인 참고 자료 원칙 적용) ----
+// 참고한 원칙(그림·코드는 가져오지 않음): Grafana 대시보드 모범 사례(큰 판단→세부, 사용률·포화·오류 묶음, 색은 상태에만, % 정규화·기준선),
+// Carbon 상태 표시(종합 상태는 가장 높은 심각도 하나, 표시 5~6개 이하, 증감은 ▲▼와 +/−), GitHub 상태 페이지(정상은 조용히, 이상만 눈에 띄게),
+// Vercel 템플릿(절제된 색·얇은 테두리·여백·큰 글자), web.dev Learn Design(설명 글 66자 안팎·줄 간격 1.6).
+// 학생 영역 안에서만 꾸민다(제공 style.css·app.js는 고치지 않음). 스타일은 학생 코드에서 요소의 style 값(CSSOM)으로만 지정한다.
+// 상태는 색만으로 구분하지 않고 기호·글자를 함께 둔다. 어두운 배경에서도 글자 대비가 충분한 색을 쓴다.
+const css = (el, styles) => { for (const [k, v] of Object.entries(styles)) el.style[k] = v; return el; };
+const UI = {
+  bg: '#0b0e14', panel: '#11151d', panel2: '#161b25', line: '#232a36', text: '#eceff4', muted: '#8f98a8',
+  accent: '#7c6cf6', accent2: '#5aa2ff', grid: 'rgba(143, 152, 168, 0.14)', mono: 'ui-monospace, SFMono-Regular, Consolas, monospace',
+};
+const PC_TONE = {
+  정상: { color: '#3ecf8e', soft: 'rgba(62, 207, 142, 0.10)', mark: '●' },
+  주의: { color: '#f5b544', soft: 'rgba(245, 181, 68, 0.10)', mark: '▲' },
+  '확인 불가': { color: '#a7b0bf', soft: 'rgba(167, 176, 191, 0.10)', mark: '?' },
+  오래됨: { color: '#a7b0bf', soft: 'rgba(167, 176, 191, 0.10)', mark: '◷' },
+  관찰: { color: '#5aa2ff', soft: 'rgba(90, 162, 255, 0.10)', mark: '◆' },
+  연결됨: { color: '#3ecf8e', soft: 'rgba(62, 207, 142, 0.10)', mark: '●' },
+  미연결: { color: '#a7b0bf', soft: 'rgba(167, 176, 191, 0.10)', mark: '○' },
+  '예제 자료': { color: '#a7b0bf', soft: 'rgba(167, 176, 191, 0.10)', mark: '◇' },
+  실패: { color: '#f87171', soft: 'rgba(248, 113, 113, 0.10)', mark: '✕' },
+};
+const tone = state => PC_TONE[state] || PC_TONE['확인 불가'];
+const isLoud = state => state === '주의' || state === '실패' || state === '확인 불가' || state === '오래됨';
+const SVGNS = 'http://www.w3.org/2000/svg';
+const svgEl = (tag, attrs = {}) => { const e = document.createElementNS(SVGNS, tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, String(v)); return e; };
+
+// 실패 코드·항목 이유별 「다음에 할 일」. 실패를 정상이나 예시 값으로 바꾸지 않는다.
+const PC_NEXT = {
+  TIMEOUT: '앱 서버 응답이 늦었습니다. 잠시 뒤 「다시 조회」를 누르세요.',
+  REQUEST_TIMEOUT: '앱 서버 응답이 늦었습니다. 잠시 뒤 「다시 조회」를 누르세요.',
+  NETWORK_ERROR: '앱 서버에 닿지 못했습니다. 앱을 켠 PowerShell 창이 열려 있는지 확인하고, 꺼졌다면 다시 켠 뒤 「다시 조회」를 누르세요.',
+  CANCELLED: '조회가 취소됐습니다. 필요하면 「다시 조회」를 누르세요.',
+  NOT_ALLOWED: '이 앱 판은 내 PC 조회를 학생 화면에 허용하지 않습니다. 시작 틀 0.2.19 이상인지 확인하세요.',
+  NO_STUDENT_API: '이 앱 판은 학생 API를 제공하지 않습니다. 시작 틀 0.2.19 이상인지 확인하세요.',
+  INVALID_PC_STATUS: '응답 형식이 내 PC 실측과 다릅니다. 앱을 껐다 켠 뒤 다시 조회하고, 계속되면 도움정보를 복사해 담당자에게 보여 주세요.',
+  INVALID_RESPONSE: '응답을 읽지 못했습니다. 앱을 껐다 켠 뒤 다시 조회하세요.',
+};
+const PC_ITEM_NEXT = {
+  permission_denied: '다음에 할 일: 관리자 권한으로 바꾸지 말고 담당자에게 읽기 권한을 확인하세요.',
+  timeout: '다음에 할 일: 잠시 뒤 「다시 조회」를 누르세요.',
+  cancelled: '다음에 할 일: 「다시 조회」를 누르세요.',
+  query_failed: '다음에 할 일: 「다시 조회」를 누르고, 계속되면 담당자에게 알리세요.',
+  unsupported: '다음에 할 일: 이 운영체제에서는 확인할 수 없는 항목입니다.',
+};
+const pcNextFor = code => PC_NEXT[code] || '「다시 조회」를 누르세요. 계속되면 위쪽 도움정보를 복사해 담당자에게 보여 주세요.';
+
+function pcText(tag, text, styles) { return css(node(tag, text), styles || {}); }
+
+// Carbon 「shape indicator」: 기호·색·글자 세 요소를 함께 쓰는 작은 상태 표시(배경 덩어리 없이).
+function pcBadge(state, extra) {
+  const t = tone(state);
+  return pcText('span', `${t.mark} ${state}${extra || ''}`, { display: 'inline-flex', alignItems: 'center', gap: '4px',
+    fontSize: '0.78rem', fontWeight: '700', color: t.color, whiteSpace: 'nowrap', letterSpacing: '0.01em' });
+}
+
+function pcPanel(extra) {
+  return css(node('div'), { background: UI.panel, border: `1px solid ${UI.line}`, borderRadius: '12px', padding: '18px', minWidth: '0', ...(extra || {}) });
+}
+
+function pcGrid(min, gap = '12px') {
+  return css(node('div'), { display: 'grid', gridTemplateColumns: `repeat(auto-fit, minmax(${min}px, 1fr))`, gap });
+}
+
+function pcSectionTitle(text, note) {
+  const wrap = css(node('div'), { display: 'flex', alignItems: 'baseline', gap: '10px', margin: '28px 0 12px', flexWrap: 'wrap' });
+  wrap.append(pcText('h5', text, { margin: '0', fontSize: '0.95rem', fontWeight: '700', color: UI.text, letterSpacing: '-0.01em' }));
+  if (note) wrap.append(pcText('span', note, { fontSize: '0.75rem', color: UI.muted }));
+  return wrap;
+}
+
+function pcButton(text, { primary = false, pressed = null, focusKey } = {}) {
+  const b = node('button', text);
+  b.type = 'button';
+  if (focusKey) b.dataset.pcFocus = focusKey;
+  if (pressed !== null) b.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+  css(b, { font: 'inherit', fontSize: '0.82rem', fontWeight: '600', borderRadius: '8px', cursor: 'pointer', padding: '7px 12px',
+    color: UI.text, background: 'transparent', border: `1px solid ${UI.line}` });
+  if (primary) css(b, { background: UI.text, border: `1px solid ${UI.text}`, color: UI.bg, padding: '9px 18px', fontSize: '0.9rem', fontWeight: '700' });
+  if (pressed) css(b, { background: UI.panel2, borderColor: UI.muted, color: UI.text });
+  return b;
+}
+
+// 막대 게이지: 사용률(%)을 0~100% 막대로 그리고 주의 기준 위치에 눈금을 둔다. role=meter 로 값도 함께 알린다.
+function pcBar(percent, state, label, limit) {
+  const p = Math.max(0, Math.min(100, percent));
+  const wrap = css(node('div'), { position: 'relative', height: '6px', borderRadius: '999px', background: UI.line, margin: '12px 0 4px' });
+  wrap.setAttribute('role', 'meter');
+  wrap.setAttribute('aria-valuemin', '0');
+  wrap.setAttribute('aria-valuemax', '100');
+  wrap.setAttribute('aria-valuenow', String(Math.round(p)));
+  wrap.setAttribute('aria-label', label);
+  wrap.append(css(node('div'), { height: '100%', width: `${p.toFixed(1)}%`, borderRadius: '999px', background: isLoud(state) ? tone(state).color : UI.text, opacity: isLoud(state) ? '1' : '0.85' }));
+  if (typeof limit === 'number') {
+    const tick = css(node('div'), { position: 'absolute', top: '-4px', left: `${limit}%`, width: '2px', height: '14px', background: tone('주의').color, borderRadius: '1px' });
+    tick.setAttribute('aria-hidden', 'true');
+    wrap.append(tick);
+  }
+  return wrap;
+}
+
+// 카드 안의 작은 추이선(최근 측정들). 값이 하나뿐이면 그리지 않는다.
+function pcSpark(values, color) {
+  const pts = values.filter(v => v != null);
+  if (pts.length < 2) return pcText('p', '추이: 2회 이상 조회하면 표시', { margin: '0', fontSize: '0.7rem', color: UI.muted });
+  const w = 140, h = 28;
+  const svg = svgEl('svg', { viewBox: `0 0 ${w} ${h}`, width: '100%', height: h, 'aria-hidden': 'true', preserveAspectRatio: 'none' });
+  css(svg, { display: 'block' });
+  const step = w / (values.length - 1);
+  const coords = values.map((v, i) => (v == null ? null : [i * step, h - 2 - (v / 100) * (h - 4)])).filter(Boolean);
+  svg.append(svgEl('polyline', { points: coords.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' '), fill: 'none', stroke: color, 'stroke-width': 1.8, 'stroke-linejoin': 'round' }));
+  return svg;
+}
+
+function pcCardShell(shown, dim) {
+  const t = tone(shown);
+  const article = node('article', undefined, 'student-pc-card');
+  article.dataset.pcState = shown;
+  return css(article, { position: 'relative', background: isLoud(shown) ? `linear-gradient(90deg, ${t.soft}, ${UI.panel} 40%)` : UI.panel,
+    border: `1px solid ${isLoud(shown) ? t.color : UI.line}`, borderRadius: '12px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '6px',
+    minWidth: '0', opacity: dim ? '0.5' : '1' });
+}
+
+function pcCardHead(title, shown, extra) {
+  const head = css(node('div'), { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' });
+  head.append(pcText('h5', title, { margin: '0', fontSize: '0.82rem', fontWeight: '600', color: UI.muted }), pcBadge(shown, extra));
+  return head;
+}
+
+function pcCardFoot(source, measuredAt) {
+  return pcText('p', source + (measuredAt ? ` · ${fmtTime(measuredAt)}` : ''), { margin: 'auto 0 0', paddingTop: '10px', fontSize: '0.7rem', color: UI.muted });
+}
+
+function pcItemNext(card) {
+  if (card.state !== '확인 불가') return null;
+  const key = Object.keys(PC_ITEM_NEXT).find(k => String(card.detail).includes(`(${k})`));
+  return key ? pcText('p', PC_ITEM_NEXT[key], { margin: '0', fontSize: '0.78rem', fontWeight: '700', color: UI.text }) : null;
+}
+
+// 핵심 상태 카드: 큰 숫자 → 막대(기준 눈금) → 미니 추이 → 설명. 방화벽은 프로필 3개를 목록으로.
+const PC_BAR_LIMIT = { CPU: PC_LIMITS.cpuPercent, 메모리: PC_LIMITS.memoryPercent, 디스크: 100 - PC_LIMITS.diskFreePercent };
+function pcMainCard(card, { shown, measuredAt, dim, sparkValues }) {
+  const article = pcCardShell(shown, dim);
+  article.append(pcCardHead(card.title, shown));
+  const number = (text, color) => pcText('p', text, { margin: '8px 0 0', fontSize: '2.1rem', fontWeight: '700', letterSpacing: '-0.03em', color: color || UI.text,
+    fontVariantNumeric: 'tabular-nums', lineHeight: '1' });
+  const small = (text, extra) => pcText('p', text, { margin: '0', fontSize: '0.78rem', color: UI.muted, lineHeight: '1.6', maxWidth: '66ch', ...(extra || {}) });
+  if (card.state === '확인 불가') {
+    article.append(number('확인 불가', tone('확인 불가').color));
+    article.append(small(card.detail));
+    const next = pcItemNext(card); if (next) article.append(next);
+  } else if (card.title === '방화벽') {
+    article.append(number(card.big));
+    article.append(small(card.sub));
+    const list = css(node('div'), { display: 'flex', flexDirection: 'column', gap: '2px', margin: '10px 0 2px' });
+    for (const part of String(card.value).split(' · ')) {
+      const [name] = part.split(' ');
+      const on = part.endsWith('켜짐');
+      const row = css(node('div'), { display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', padding: '4px 0', borderBottom: `1px solid ${UI.line}` });
+      const t = tone(on ? '정상' : '주의');
+      row.append(pcText('span', name, { color: UI.text }), pcText('span', on ? `${t.mark} 켜짐` : `${t.mark} 꺼짐`, { fontSize: '0.78rem', fontWeight: '700', color: t.color }));
+      list.append(row);
+    }
+    article.append(list);
+    for (const extra of card.notes || []) article.append(small(extra, { color: tone('주의').color }));
+    article.append(small(card.detail));
+  } else {
+    article.append(number(card.big, isLoud(shown) ? tone(shown).color : UI.text));
+    article.append(small(card.sub));
+    article.append(pcBar(card.meter, shown, `${card.title} ${card.title === '디스크' ? '사용 중인 공간' : '사용률'}`, PC_BAR_LIMIT[card.title]));
+    article.append(pcSpark(sparkValues, isLoud(shown) ? tone(shown).color : UI.muted));
+    article.append(small(card.detail));
+  }
+  article.append(pcCardFoot('출처: 이 PC 실측', measuredAt));
+  return article;
+}
+
+// 연결과 기록 카드: 네트워크·Windows 기록(PC 실측)과 SDP 서버(앱 연결 상태)
+function pcLinkCard(card, { shown, measuredAt, isPc }) {
+  const article = pcCardShell(shown, false);
+  article.append(pcCardHead(card.title, shown, card.rising && shown === '관찰' ? ' · ▲ 오류 증가' : ''));
+  if (card.state === '확인 불가') {
+    article.append(pcText('p', '확인 불가', { margin: '4px 0 0', fontSize: '1.3rem', fontWeight: '800', color: tone('확인 불가').color }));
+  } else if (card.title === 'Windows 기록') {
+    const nums = css(node('div'), { display: 'flex', gap: '18px', alignItems: 'flex-end' });
+    const m = String(card.value).match(/경고 (\d+)건 · 오류 (\d+)건/);
+    const pair = (label, value, color) => {
+      const box = css(node('div'), {});
+      box.append(pcText('p', value, { margin: '8px 0 0', fontSize: '2.1rem', fontWeight: '700', letterSpacing: '-0.03em', color, fontVariantNumeric: 'tabular-nums', lineHeight: '1' }));
+      box.append(pcText('p', label, { margin: '2px 0 0', fontSize: '0.75rem', color: UI.muted }));
+      return box;
+    };
+    if (m) nums.append(pair('오류 · 24시간', m[2], UI.text), pair('경고 · 24시간', m[1], UI.text));
+    else nums.append(pcText('p', card.value, { margin: '0', fontSize: '1rem', fontWeight: '700' }));
+    article.append(nums);
+  } else {
+    article.append(pcText('p', card.big || card.value, { margin: '8px 0 0', fontSize: card.title === 'SDP 서버' ? '1.4rem' : '2.1rem', fontWeight: '700', letterSpacing: '-0.03em', color: UI.text, fontVariantNumeric: 'tabular-nums', lineHeight: '1.05' }));
+    if (card.sub) article.append(pcText('p', card.sub, { margin: '0', fontSize: '0.78rem', color: UI.muted }));
+  }
+  article.append(pcText('p', card.detail, { margin: '0', fontSize: '0.78rem', color: UI.muted, lineHeight: '1.6', maxWidth: '66ch' }));
+  const next = pcItemNext(card); if (next) article.append(next);
+  article.append(pcCardFoot(isPc ? '출처: 이 PC 실측' : '출처: 앱의 SDP 연결 상태(PC 실측과 별개)', isPc ? measuredAt : null));
+  return article;
+}
+
+function pcLinkRow(cards, measuredAt, stale) {
+  const row = node('div', undefined, 'student-pc-links');
+  row.append(pcSectionTitle('연결과 기록', 'PC 실측과 SDP 연결 상태는 출처가 다릅니다'));
+  const grid = pcGrid(230);
+  for (const card of cards) {
+    const isPc = card.title !== 'SDP 서버';
+    const shown = isPc && stale && card.state !== '확인 불가' ? '오래됨' : card.state;
+    grid.append(pcLinkCard(card, { shown, measuredAt, isPc }));
+  }
+  row.append(grid);
+  return row;
+}
+
+// CPU·메모리 사용률 추이(0~100%): 면 채우기·눈금선·주의 기준선(85%)·시각 축. 선 모양(실선·점선)과 글자 범례로도 구분한다.
 function pcTrendChart(history) {
-  const SVG = 'http://www.w3.org/2000/svg';
-  const w = 320, h = 120, pad = 6;
-  const svg = document.createElementNS(SVG, 'svg');
-  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
-  svg.setAttribute('width', String(w));
-  svg.setAttribute('height', String(h));
-  svg.setAttribute('role', 'img');
-  const frame = document.createElementNS(SVG, 'rect');
-  frame.setAttribute('x', '0'); frame.setAttribute('y', '0'); frame.setAttribute('width', String(w)); frame.setAttribute('height', String(h));
-  frame.setAttribute('fill', 'none'); frame.setAttribute('stroke', 'currentColor'); frame.setAttribute('stroke-opacity', '0.3');
-  svg.append(frame);
-  const series = [{ title: 'CPU', dash: '' }, { title: '메모리', dash: '4 3' }];
+  const w = 720, h = 210, left = 40, right = 14, top = 14, bottom = 26;
+  const svg = svgEl('svg', { viewBox: `0 0 ${w} ${h}`, role: 'img' });
+  css(svg, { width: '100%', height: 'auto', display: 'block' });
+  const defs = svgEl('defs');
+  const grad = (id, color) => {
+    const g = svgEl('linearGradient', { id, x1: 0, y1: 0, x2: 0, y2: 1 });
+    g.append(svgEl('stop', { offset: '0%', 'stop-color': color, 'stop-opacity': 0.18 }), svgEl('stop', { offset: '100%', 'stop-color': color, 'stop-opacity': 0 }));
+    defs.append(g);
+  };
+  grad('student-pc-grad-cpu', UI.accent2);
+  grad('student-pc-grad-mem', UI.accent);
+  svg.append(defs);
+  const yOf = p => top + (1 - p / 100) * (h - top - bottom);
+  for (const p of [0, 25, 50, 75, 100]) {
+    svg.append(svgEl('line', { x1: left, x2: w - right, y1: yOf(p), y2: yOf(p), stroke: UI.grid }));
+    const label = svgEl('text', { x: left - 8, y: yOf(p) + 4, 'text-anchor': 'end', 'font-size': 11, fill: UI.muted });
+    label.textContent = `${p}%`;
+    svg.append(label);
+  }
+  svg.append(svgEl('line', { x1: left, x2: w - right, y1: yOf(PC_LIMITS.cpuPercent), y2: yOf(PC_LIMITS.cpuPercent), stroke: tone('주의').color, 'stroke-dasharray': '4 4', 'stroke-width': 1.5 }));
+  const warnLabel = svgEl('text', { x: w - right, y: yOf(PC_LIMITS.cpuPercent) - 6, 'text-anchor': 'end', 'font-size': 11, fill: tone('주의').color });
+  warnLabel.textContent = `▲ 주의 기준 ${PC_LIMITS.cpuPercent}%`;
+  svg.append(warnLabel);
   const n = history.length;
+  const xOf = i => (n === 1 ? (left + w - right) / 2 : left + (i * (w - left - right)) / (n - 1));
+  const series = [{ title: 'CPU', dash: '', color: UI.accent2, fill: 'url(#student-pc-grad-cpu)' }, { title: '메모리', dash: '7 5', color: UI.accent, fill: 'url(#student-pc-grad-mem)' }];
   for (const s of series) {
     const pts = [];
-    history.forEach((sample, i) => {
-      const card = sample.cards.find(c => c.title === s.title);
-      if (!card || card.percent == null) return;
-      const x = n === 1 ? w / 2 : pad + (i * (w - pad * 2)) / (n - 1);
-      const y = h - pad - (card.percent / 100) * (h - pad * 2);
-      pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
-    });
+    history.forEach((sample, i) => { const card = sample.cards.find(c => c.title === s.title); if (card && card.percent != null) pts.push([xOf(i), yOf(card.percent)]); });
     if (!pts.length) continue;
-    const line = document.createElementNS(SVG, 'polyline');
-    line.setAttribute('points', pts.join(' '));
-    line.setAttribute('fill', 'none');
-    line.setAttribute('stroke', 'currentColor');
-    line.setAttribute('stroke-width', '2');
-    if (s.dash) line.setAttribute('stroke-dasharray', s.dash);
-    svg.append(line);
+    if (pts.length > 1) {
+      const area = `${pts[0][0].toFixed(1)},${yOf(0).toFixed(1)} ${pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ')} ${pts[pts.length - 1][0].toFixed(1)},${yOf(0).toFixed(1)}`;
+      svg.append(svgEl('polygon', { points: area, fill: s.fill }));
+    }
+    svg.append(svgEl('polyline', { points: pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' '), fill: 'none', stroke: s.color, 'stroke-width': 2,
+      'stroke-linejoin': 'round', 'stroke-linecap': 'round', ...(s.dash ? { 'stroke-dasharray': s.dash } : {}) }));
+    const [lx, ly] = pts[pts.length - 1];
+    svg.append(svgEl('circle', { cx: lx, cy: ly, r: 4.5, fill: s.color, stroke: UI.bg, 'stroke-width': 2 }));
+  }
+  if (n) {
+    const first = svgEl('text', { x: left, y: h - 6, 'font-size': 11, fill: UI.muted }); first.textContent = new Date(history[0].measuredAt).toLocaleTimeString('ko-KR');
+    const last = svgEl('text', { x: w - right, y: h - 6, 'text-anchor': 'end', 'font-size': 11, fill: UI.muted }); last.textContent = new Date(history[n - 1].measuredAt).toLocaleTimeString('ko-KR');
+    svg.append(first, last);
   }
   svg.setAttribute('aria-label', `CPU·메모리 사용률 추이, 측정 ${n}회`);
   return svg;
@@ -1009,28 +1244,24 @@ function pcDelta(history, title) {
   const before = pick(history[history.length - 2]);
   if (now == null || before == null) return `${title}: 직전 측정과 비교할 수 없음(확인 불가 포함)`;
   const d = now - before;
-  return `${title}: 직전 측정 대비 ${d >= 0 ? '+' : ''}${d.toFixed(1)}%p`;
-}
-
-function pcLinkRow(cards, measuredAt, stale) {
-  const row = node('div', undefined, 'student-pc-links');
-  row.append(node('h5', '연결과 기록'));
-  for (const card of cards) {
-    const article = node('article', undefined, 'student-pc-card');
-    const isPc = card.title !== 'SDP 서버';
-    const shown = isPc && stale && card.state !== '확인 불가' ? '오래됨' : card.state;
-    article.dataset.pcState = shown;
-    const mark = { 정상: '● ', 주의: '▲ ', 관찰: '◆ ', 오래됨: '◷ ', 연결됨: '● ', 미연결: '○ ', '예제 자료': '◇ ' }[shown] || '? ';
-    article.append(node('h5', card.title), node('p', `${mark}${shown}${card.rising && !stale ? ' · ▲ 오류 증가' : ''}`), node('p', card.value), node('p', card.detail));
-    article.append(node('p', isPc ? `출처: 이 PC 실측${measuredAt ? ` · 측정 시각: ${fmtTime(measuredAt)}` : ''}` : '출처: 앱의 SDP 연결 상태(PC 실측과 별개)'));
-    row.append(article);
-  }
-  return row;
+  if (Math.abs(d) < 0.05) return `${title} ■ 0.0%p (직전 측정 대비 변화 없음)`;
+  return `${title} ${d > 0 ? '▲' : '▼'} ${d > 0 ? '+' : '−'}${Math.abs(d).toFixed(1)}%p (직전 측정 대비)`;
 }
 
 function createPcDashboard({ api, onChange }) {
-  const state = { history: [], pending: false, lastError: null, auto: false, timer: null, staleTimer: null, filter: 'all' };
+  const state = { history: [], pending: false, lastError: null, auto: false, timer: null, staleTimer: null, filter: 'all', focusKey: null };
   const changed = () => { if (typeof onChange === 'function') onChange(); };
+  // 다시 그린 뒤에도 키보드 초점을 방금 누른 버튼·체크박스에 돌려준다.
+  const keepFocus = key => { state.focusKey = key; };
+  const restoreFocus = () => {
+    if (!state.focusKey || typeof setTimeout !== 'function') return;
+    const key = state.focusKey;
+    setTimeout(() => {
+      if (typeof document === 'undefined' || !document.querySelector) return;
+      const target = document.querySelector(`[data-pc-focus="${key}"]`);
+      if (target && typeof target.focus === 'function' && !target.disabled) { target.focus(); state.focusKey = null; }
+    }, 0);
+  };
 
   function stopAuto() { if (state.timer !== null) clearTimeout(state.timer); state.timer = null; }
   function scheduleAuto() {
@@ -1052,7 +1283,7 @@ function createPcDashboard({ api, onChange }) {
   async function record() {
     if (state.pending) return;
     if (!api || typeof api.get !== 'function') {
-      state.lastError = { code: 'NO_STUDENT_API', message: '학생 API를 받지 못했습니다. 이 앱 판에서는 지원하지 않습니다.', at: new Date().toISOString() };
+      state.lastError = { code: 'NO_STUDENT_API', message: '학생 API를 받지 못했습니다.', at: new Date().toISOString() };
       changed(); return;
     }
     state.pending = true; changed();
@@ -1075,87 +1306,118 @@ function createPcDashboard({ api, onChange }) {
     scheduleAuto();
   }
 
-  function render(statusInput) {
-    const box = node('section', undefined, 'student-pc-dashboard');
-    box.append(node('h4', '내 PC 관제 대시보드 (학생 구현)'));
-    box.append(node('p', '값은 제공 「내 PC 상태」와 같은 실측 경로(/api/pc/status, 출처 local-pc)에서 읽습니다. 예시 값은 쓰지 않습니다. 상태 판단·추이·기록은 학생이 더한 부분입니다.'));
+  // 맨 위 배너: 지금 이 PC의 한 줄 판단 + 가장 먼저 볼 항목 + 조회 조작
+  function renderHero(latest, stale) {
+    const hero = css(node('div'), { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px', flexWrap: 'wrap',
+      padding: '22px 24px', borderRadius: '12px', border: `1px solid ${UI.line}`, background: UI.panel });
+    const left = css(node('div'), { display: 'flex', alignItems: 'center', gap: '14px', minWidth: '0' });
+    let verdict = '확인 전', vstate = '확인 불가', headline = '아직 조회하지 않았습니다. 「다시 조회」를 누르면 이 PC의 값을 읽습니다.';
+    if (state.lastError && !latest) { verdict = '조회 실패'; vstate = '실패'; headline = '이 PC 값을 읽지 못했습니다. 아래 안내를 확인하세요.'; }
+    else if (latest) {
+      const all = [...latest.cards, latest.network];
+      const warns = all.filter(c => c.state === '주의');
+      const unks = all.filter(c => c.state === '확인 불가');
+      if (stale) { verdict = '오래됨'; vstate = '오래됨'; headline = '60초가 지난 값입니다. 현재 상태로 보지 말고 「다시 조회」를 누르세요.'; }
+      else if (warns.length) { verdict = `주의 ${warns.length}건`; vstate = '주의'; headline = `먼저 볼 항목: ${warns.map(c => c.title).join(', ')} — ${warns[0].detail.split('.')[0]}.`; }
+      else if (unks.length) { verdict = `확인 불가 ${unks.length}건`; vstate = '확인 불가'; headline = `확인하지 못한 항목: ${unks.map(c => c.title).join(', ')}. 정상으로 보지 않습니다.`; }
+      else { verdict = '정상'; vstate = '정상'; headline = '핵심 항목이 모두 기준 안입니다. 보호 전체의 안전 판정은 아닙니다.'; }
+      if (state.lastError) headline = `최근 조회 실패 — 아래 값은 이전 값(현재 아님)입니다. ${headline}`;
+    }
+    const t = tone(vstate);
+    css(hero, { borderLeft: `4px solid ${t.color}` });
+    const orb = pcText('div', t.mark, { width: '44px', height: '44px', flex: '0 0 auto', borderRadius: '50%', display: 'grid', placeItems: 'center', fontSize: '1.2rem',
+      color: t.color, background: t.soft, border: `1px solid ${t.color}` });
+    orb.setAttribute('aria-hidden', 'true');
+    const txt = css(node('div'), { minWidth: '0' });
+    txt.append(pcText('p', '지금 이 PC 상태', { margin: '0', fontSize: '0.78rem', fontWeight: '600', color: UI.muted }));
+    txt.append(pcText('p', verdict, { margin: '4px 0 6px', fontSize: '1.6rem', fontWeight: '700', letterSpacing: '-0.02em', color: t.color, lineHeight: '1.1' }));
+    txt.append(pcText('p', headline, { margin: '0', fontSize: '0.88rem', color: UI.text, lineHeight: '1.6', maxWidth: '66ch' }));
+    left.append(orb, txt);
 
-    const controls = node('div', undefined, 'student-pc-controls');
-    const button = node('button', state.pending ? '실측 중…' : '내 PC 실측 기록');
-    button.type = 'button';
+    const right = css(node('div'), { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' });
+    const button = pcButton(state.pending ? '⟳ 새로 읽는 중…' : '⟳ 다시 조회', { primary: true, focusKey: 'refresh' });
     button.disabled = state.pending;
-    button.addEventListener('click', () => { void record(); });
-    const label = node('label');
+    if (state.pending) css(button, { opacity: '0.7', cursor: 'progress' });
+    button.setAttribute('aria-busy', state.pending ? 'true' : 'false');
+    button.addEventListener('click', () => { keepFocus('refresh'); void record(); });
+    const label = css(node('label'), { display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: UI.muted, cursor: 'pointer' });
     const check = document.createElement('input');
     check.type = 'checkbox';
     check.checked = state.auto;
+    check.dataset.pcFocus = 'auto';
     check.addEventListener('change', () => {
+      keepFocus('auto');
       state.auto = check.checked;
       if (state.auto) void record(); else stopAuto();
       changed();
     });
-    label.append(check, document.createTextNode(' 10초마다 기록 (앱 탭이 보이는 동안)'));
-    controls.append(button, label);
-    box.append(controls);
+    const live = state.auto ? pcText('span', '● 자동 조회 중 · 10초', { color: tone('정상').color, fontWeight: '700', fontSize: '0.75rem' }) : null;
+    label.append(check, document.createTextNode('10초마다 자동 조회(탭이 보일 때)'));
+    right.append(button, label);
+    if (live) right.append(live);
+    hero.append(left, right);
+    return hero;
+  }
 
-    if (state.lastError) {
-      const fail = node('p', `조회 실패: ${state.lastError.code}${state.lastError.message ? ` — ${state.lastError.message}` : ''} (${fmtTime(state.lastError.at)}). 이전 값은 현재 값이 아닙니다.`);
-      fail.dataset.pcState = 'failed';
-      box.append(fail);
-    }
+  function renderStatusLine(latest, stale) {
+    const line = pcText('p', '', { margin: '10px 2px 0', fontSize: '0.8rem', color: stale ? tone('주의').color : UI.muted, fontWeight: stale ? '700' : '400' });
+    line.setAttribute('role', 'status');
+    if (state.pending) line.textContent = '⟳ 새로 읽는 중… 끝나면 카드가 새 값으로 바뀝니다.';
+    else if (latest) {
+      const age = Math.max(0, Math.round((Date.now() - Date.parse(latest.measuredAt)) / 1000));
+      line.textContent = `마지막 실측 ${fmtTime(latest.measuredAt)} (${age}초 전) · 출처 /api/pc/status(local-pc) · 학생 구현 · 예시 값 없음${stale ? ' · 오래됨: 60초가 지난 값' : ''}`;
+      if (stale) line.dataset.pcState = 'stale';
+    } else line.textContent = '출처 /api/pc/status(local-pc) · 학생 구현 · 예시 값 없음';
+    return line;
+  }
 
-    const latest = state.history[state.history.length - 1];
-    const sdp = pcSdpCard(statusInput && statusInput.mode);
-    if (!latest) {
-      box.append(node('p', '아직 실측하지 않았습니다. 「내 PC 실측 기록」을 누르면 이 PC의 값을 읽습니다.'));
-      box.append(pcLinkRow([sdp], null));
-      return box;
-    }
+  function renderError(hasPrevious) {
+    const e = state.lastError;
+    const t = tone('실패');
+    const box = css(node('div'), { margin: '12px 0 0', padding: '14px 16px', borderRadius: '14px', border: `1px solid ${t.color}`, background: t.soft });
+    box.setAttribute('role', 'alert');
+    box.dataset.pcState = 'failed';
+    box.append(pcText('p', `✕ 조회 실패 (${fmtTime(e.at)})`, { margin: '0', fontWeight: '900', color: t.color }));
+    box.append(pcText('p', `무엇이 안 됐는지: ${e.code}${e.message ? ` — ${e.message}` : ''}`, { margin: '6px 0 0', fontSize: '0.85rem', color: UI.text }));
+    box.append(pcText('p', `다음에 할 일: ${pcNextFor(e.code)}`, { margin: '4px 0 0', fontSize: '0.85rem', fontWeight: '800', color: UI.text }));
+    if (hasPrevious) box.append(pcText('p', '아래 카드는 이전 값(현재 아님)입니다. 흐리게 표시했습니다.', { margin: '4px 0 0', fontSize: '0.78rem', color: UI.muted }));
+    return box;
+  }
 
-    const age = Date.now() - Date.parse(latest.measuredAt);
-    const stale = age > PC_STALE_MS;
-    const when = node('p', `마지막 실측: ${fmtTime(latest.measuredAt)} (${Math.max(0, Math.round(age / 1000))}초 전)${stale ? ' · 오래됨: 60초가 지난 값이라 현재 상태로 보지 마세요.' : ''}`);
-    if (stale) when.dataset.pcState = 'stale';
-    box.append(when);
+  function renderTrend() {
+    const panel = pcPanel();
+    panel.className = 'student-pc-trend';
+    const head = css(node('div'), { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '6px' });
+    head.append(pcText('h5', `추이 · 측정 ${state.history.length}회 / 최대 ${PC_HISTORY_MAX}회`, { margin: '0', fontSize: '0.9rem', fontWeight: '800', color: UI.text }));
+    const legend = css(node('div'), { display: 'flex', gap: '12px', fontSize: '0.75rem', color: UI.muted, flexWrap: 'wrap' });
+    legend.append(pcText('span', '━ CPU(실선)', { color: UI.accent2, fontWeight: '700' }), pcText('span', '╍ 메모리(점선)', { color: UI.accent, fontWeight: '700' }),
+      pcText('span', '┄ 주의 기준 85%', { color: tone('주의').color, fontWeight: '700' }));
+    head.append(legend);
+    panel.append(head, pcTrendChart(state.history));
+    const deltas = css(node('div'), { display: 'flex', gap: '16px', flexWrap: 'wrap', marginTop: '6px' });
+    for (const t of ['CPU', '메모리']) { const d = pcDelta(state.history, t); if (d) deltas.append(pcText('span', d, { fontSize: '0.82rem', fontWeight: '700', color: UI.text })); }
+    if (state.history.length < 2) deltas.append(pcText('span', '비교하려면 한 번 더 조회하세요.', { fontSize: '0.82rem', color: UI.muted }));
+    panel.append(deltas);
+    return panel;
+  }
 
-    const grid = node('div', undefined, 'student-pc-cards');
-    for (const card of latest.cards) {
-      const shown = stale && card.state !== '확인 불가' ? '오래됨' : card.state;
-      const article = node('article', undefined, 'student-pc-card');
-      article.dataset.pcState = shown;
-      const mark = shown === '정상' ? '● ' : shown === '주의' ? '▲ ' : shown === '오래됨' ? '◷ ' : '? ';
-      article.append(
-        node('h5', card.title),
-        node('p', `${mark}${shown}`),
-        node('p', card.value),
-        node('p', card.detail),
-      );
-      for (const extra of card.notes || []) article.append(node('p', extra));
-      article.append(node('p', `측정 시각: ${fmtTime(latest.measuredAt)}`));
-      grid.append(article);
-    }
-    box.append(grid);
-    box.append(pcLinkRow([latest.network, latest.eventsCard, sdp], latest.measuredAt, stale));
-
-    const trend = node('div', undefined, 'student-pc-trend');
-    trend.append(node('h5', `추이 (앱을 켠 뒤 측정 ${state.history.length}회, 최대 ${PC_HISTORY_MAX}회)`));
-    trend.append(pcTrendChart(state.history));
-    trend.append(node('p', '범례: 실선 = CPU 사용률, 점선 = 메모리 사용률. 세로축 0~100%.'));
-    for (const t of ['CPU', '메모리']) { const d = pcDelta(state.history, t); if (d) trend.append(node('p', d)); }
-    if (state.history.length < 2) trend.append(node('p', '비교하려면 한 번 더 기록하세요.'));
-    box.append(trend);
-
-    const log = node('div', undefined, 'student-pc-log');
-    log.append(node('h5', '최근 기록 (새 기록이 위)'));
+  function renderLog() {
+    const panel = pcPanel();
+    panel.className = 'student-pc-log';
+    const head = css(node('div'), { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '10px' });
+    head.append(pcText('h5', '최근 기록 · 새 기록이 위', { margin: '0', fontSize: '0.9rem', fontWeight: '800', color: UI.text }));
     const filters = node('div', undefined, 'student-pc-filter');
+    filters.setAttribute('role', 'group');
+    filters.setAttribute('aria-label', '기록 거르기');
+    css(filters, { display: 'flex', gap: '6px', flexWrap: 'wrap' });
     for (const [key, text] of [['all', '전체'], ['warn', '주의만'], ['unavailable', '확인 불가만']]) {
-      const f = node('button', state.filter === key ? `${text} (선택됨)` : text);
-      f.type = 'button';
-      f.setAttribute('aria-pressed', state.filter === key ? 'true' : 'false');
-      f.addEventListener('click', () => { state.filter = key; changed(); });
+      const f = pcButton(state.filter === key ? `${text} (선택됨)` : text, { pressed: state.filter === key, focusKey: `filter-${key}` });
+      css(f, { padding: '5px 12px', fontSize: '0.78rem' });
+      f.addEventListener('click', () => { keepFocus(`filter-${key}`); state.filter = key; changed(); });
       filters.append(f);
     }
-    log.append(filters);
+    head.append(filters);
+    panel.append(head);
     const matches = sample => {
       const all = [...sample.cards, sample.network].filter(Boolean);
       if (state.filter === 'warn') return all.some(c => c.state === '주의') || (sample.eventsCard && sample.eventsCard.rising);
@@ -1163,35 +1425,159 @@ function createPcDashboard({ api, onChange }) {
       return true;
     };
     const shownSamples = [...state.history].reverse().filter(matches);
-    if (!shownSamples.length) log.append(node('p', state.filter === 'warn' ? '주의에 해당하는 기록이 없습니다.' : '확인 불가에 해당하는 기록이 없습니다.'));
-    const list = node('ul');
+    if (!shownSamples.length) panel.append(pcText('p', state.history.length ? (state.filter === 'warn' ? '주의에 해당하는 기록이 없습니다.' : '확인 불가에 해당하는 기록이 없습니다.') : '아직 기록이 없습니다.', { margin: '0', color: UI.muted, fontSize: '0.85rem' }));
+    const COLS = '96px repeat(5, minmax(0, 1fr))';
+    const headRow = css(node('div'), { display: 'grid', gridTemplateColumns: COLS, gap: '8px', padding: '0 0 8px', fontSize: '0.72rem', color: UI.muted, borderBottom: `1px solid ${UI.line}` });
+    headRow.setAttribute('aria-hidden', 'true');
+    for (const h of ['시각', 'CPU', '메모리', '디스크 여유', '방화벽', '오류 / 경고']) headRow.append(pcText('span', h));
+    if (shownSamples.length) panel.append(headRow);
+    const list = css(node('ul'), { listStyle: 'none', margin: '0', padding: '0', maxHeight: '300px', overflowY: 'auto' });
+    list.tabIndex = 0;
+    list.setAttribute('aria-label', '최근 기록 목록');
+    const cell = (card, text) => {
+      const loud = card && isLoud(card.state);
+      return pcText('span', card && card.state === '확인 불가' ? '? 확인 불가' : `${loud ? `${tone(card.state).mark} ` : ''}${text}`, {
+        fontFamily: UI.mono, fontSize: '0.8rem', color: loud ? tone(card.state).color : UI.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' });
+    };
     for (const sample of shownSamples) {
+      const by = t => sample.cards.find(c => c.title === t);
       const parts = sample.cards.map(c => `${c.title} ${c.state === '확인 불가' ? '확인 불가' : c.value} [${c.state}]`);
       const net = sample.network ? ` · 네트워크 ${sample.network.value} [${sample.network.state}]` : '';
-      list.append(node('li', `${fmtTime(sample.measuredAt)} · ${parts.join(' · ')}${net} · Windows 기록(최근 24시간) ${sample.events}${sample.eventsCard && sample.eventsCard.rising ? ' ▲ 오류 증가' : ''}`));
+      const full = `${fmtTime(sample.measuredAt)} · ${parts.join(' · ')}${net} · Windows 기록(최근 24시간) ${sample.events}${sample.eventsCard && sample.eventsCard.rising ? ' ▲ 오류 증가' : ''}`;
+      const li = css(node('li'), { display: 'grid', gridTemplateColumns: COLS, gap: '8px', alignItems: 'center', padding: '9px 0', borderBottom: `1px solid ${UI.line}` });
+      li.setAttribute('aria-label', full);
+      li.title = full;
+      const cpu = by('CPU'), mem = by('메모리'), disk = by('디스크'), fw = by('방화벽');
+      const ev = sample.eventCounts;
+      li.append(
+        pcText('span', new Date(sample.measuredAt).toLocaleTimeString('ko-KR'), { fontFamily: UI.mono, fontSize: '0.78rem', color: UI.muted }),
+        cell(cpu, cpu && cpu.percent != null ? `${cpu.percent.toFixed(1)}%` : ''),
+        cell(mem, mem && mem.percent != null ? `${mem.percent.toFixed(1)}%` : ''),
+        cell(disk, disk && disk.big ? disk.big : ''),
+        cell(fw, fw && fw.big ? `${fw.big} 켜짐` : ''),
+        pcText('span', ev ? `${ev.error} / ${ev.warning}${sample.eventsCard && sample.eventsCard.rising ? ' ▲' : ''}` : '? 확인 불가', { fontFamily: UI.mono, fontSize: '0.8rem', color: sample.eventsCard && sample.eventsCard.rising ? tone('주의').color : UI.text }),
+      );
+      list.append(li);
     }
-    log.append(list);
-    box.append(log);
+    panel.append(list);
+    return panel;
+  }
+
+  function render(statusInput) {
+    const box = node('section', undefined, 'student-pc-dashboard');
+    box.setAttribute('aria-label', '내 PC 관제 대시보드');
+    css(box, { colorScheme: 'dark', background: UI.bg, color: UI.text, border: `1px solid ${UI.line}`, borderRadius: '16px', padding: '24px', marginBottom: '16px', lineHeight: '1.6' });
+    const titleRow = css(node('div'), { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' });
+    titleRow.append(pcText('h4', '내 PC 관제 대시보드', { margin: '0', fontSize: '1.35rem', fontWeight: '700', color: UI.text, letterSpacing: '-0.02em' }),
+      pcText('span', '학생 구현', { fontSize: '0.72rem', fontWeight: '600', padding: '2px 8px', borderRadius: '999px', color: UI.muted, border: `1px solid ${UI.line}` }));
+    box.append(titleRow);
+    const latest = state.history[state.history.length - 1];
+    const stale = latest ? Date.now() - Date.parse(latest.measuredAt) > PC_STALE_MS : false;
+    const sdp = pcSdpCard(statusInput && statusInput.mode);
+    box.append(renderHero(latest, stale), renderStatusLine(latest, stale));
+    if (state.lastError) box.append(renderError(Boolean(latest)));
+    if (!latest) {
+      box.append(pcLinkRow([sdp], null, false));
+      restoreFocus();
+      return box;
+    }
+    const dim = Boolean(state.lastError);
+    box.append(pcSectionTitle('사용률과 보호 설정', dim ? '이전 값(현재 아님)' : `측정 ${fmtTime(latest.measuredAt)} · 막대의 주황 눈금 = 주의 기준`));
+    const grid = pcGrid(220);
+    grid.className = 'student-pc-cards';
+    for (const card of latest.cards) {
+      const shown = stale && card.state !== '확인 불가' ? '오래됨' : card.state;
+      const sparkValues = state.history.map(s => { const c = s.cards.find(x => x.title === card.title); return c && typeof c.meter === 'number' && c.state !== '확인 불가' ? c.meter : null; });
+      grid.append(pcMainCard(card, { shown, measuredAt: latest.measuredAt, dim, sparkValues }));
+    }
+    box.append(grid);
+    box.append(pcLinkRow([latest.network, latest.eventsCard, sdp], latest.measuredAt, stale));
+    box.append(pcSectionTitle('추이와 기록'));
+    const bottom = pcGrid(340, '14px');
+    bottom.append(renderTrend(), renderLog());
+    box.append(bottom);
+    restoreFocus();
     return box;
   }
 
   return { render };
 }
 
+// ---- 4일차: 학생 칸 8개를 같은 관제 패널로 통일 ----
+// 각 렌더 함수가 만든 DOM의 글자·속성·판정은 그대로 두고, 겉모양(색·테두리·간격)만 입힌다.
+// display 는 건드리지 않는다(기록 거르기·상세 보기가 hidden 속성으로 숨기기 때문).
+// 상태 강조는 기존 표시(data-attention·data-decision·data-ai-cause)와 화면 문구로만 정하며, 문구를 바꾸지 않는다.
+const SLOT_TONE_RULES = [
+  { tone: '실패', test: t => /^(요청 실패|기록을 불러오지 못했습니다|AI 연결 점검 실패|AI 설명 실패|조회 실패)/.test(t) || /연결 실패:|불러오기 실패|조치 상태: 실패/.test(t) },
+  { tone: '주의', test: t => t.includes('⚠ 주의') || /결과 불명|만료|거부\(denied\)|접근 거부/.test(t) },
+  { tone: '확인 불가', test: t => /확인 불가|연결 없음|예제 자료/.test(t) },
+];
+const DECISION_TONE = { allow: '정상', deny: '실패', challenge: '주의', unknown: '확인 불가', 'request-failed': '실패' };
+
+function slotAccent(el, toneName) {
+  const t = tone(toneName);
+  css(el, { borderLeft: `3px solid ${t.color}`, paddingLeft: '10px', background: t.soft, borderRadius: '8px' });
+}
+
+function themeSlot(root, { inner = false } = {}) {
+  if (!root || !root.style) return root;
+  css(root, { colorScheme: 'dark', background: UI.bg, color: UI.text, border: `1px solid ${UI.line}`, borderRadius: '12px',
+    padding: '18px', lineHeight: '1.6' });
+  const walk = el => {
+    for (const child of [...(el.children || [])]) {
+      if (child.classList && child.classList.contains('student-pc-dashboard')) continue; // 대시보드는 이미 꾸며져 있음
+      styleOne(child);
+      walk(child);
+    }
+  };
+  walk(root);
+  return root;
+}
+
+function styleOne(el) {
+  const tag = String(el.tagName || '').toLowerCase();
+  const own = (el.children && el.children.length) ? '' : String(el.textContent || '');
+  if (tag === 'h4') css(el, { margin: '4px 0 10px', fontSize: '1rem', fontWeight: '700', color: UI.text, letterSpacing: '-0.01em' });
+  else if (tag === 'h5') css(el, { margin: '16px 0 6px', fontSize: '0.82rem', fontWeight: '600', color: UI.muted });
+  else if (tag === 'p') css(el, { margin: '6px 0', color: UI.text, fontSize: '0.88rem', maxWidth: '66ch' });
+  else if (tag === 'ul') css(el, { listStyle: 'none', margin: '8px 0', padding: '0' });
+  else if (tag === 'li') css(el, { background: UI.panel, border: `1px solid ${UI.line}`, borderRadius: '10px', padding: '8px 12px', margin: '6px 0', fontSize: '0.86rem' });
+  else if (tag === 'pre') css(el, { background: UI.panel2, color: UI.text, border: `1px solid ${UI.line}`, borderRadius: '10px', padding: '10px', overflow: 'auto', fontSize: '0.8rem' });
+  else if (tag === 'button') {
+    css(el, { font: 'inherit', fontSize: '0.82rem', fontWeight: '600', borderRadius: '8px', padding: '6px 12px', margin: '4px 6px 4px 0', cursor: el.disabled ? 'not-allowed' : 'pointer',
+      color: UI.text, background: 'transparent', border: `1px solid ${UI.line}`, opacity: el.disabled ? '0.55' : '1' });
+  } else if (tag === 'select') css(el, { font: 'inherit', fontSize: '0.85rem', color: UI.text, background: UI.panel2, border: `1px solid ${UI.line}`, borderRadius: '8px', padding: '5px 8px', marginLeft: '6px' });
+  else if (tag === 'label') css(el, { fontSize: '0.8rem', color: UI.muted, fontWeight: '700' });
+  if (el.classList && el.classList.contains('student-mode')) {
+    css(el, { display: 'inline-block', padding: '2px 10px', borderRadius: '999px', fontSize: '0.78rem', fontWeight: '600',
+      color: tone('확인 불가').color, border: `1px solid ${UI.line}` });
+    return;
+  }
+  if (el.classList && el.classList.contains('student-filters')) css(el, { padding: '10px 12px', background: UI.panel, border: `1px solid ${UI.line}`, borderRadius: '12px' });
+  if (el.classList && el.classList.contains('student-filter')) css(el, { margin: '4px 16px 4px 0' });
+  if (el.classList && el.classList.contains('student-event-detail')) css(el, { marginTop: '8px', padding: '10px 12px', background: UI.panel2, border: `1px dashed ${UI.line}`, borderRadius: '10px' });
+  if (el.dataset && el.dataset.attention === 'true') { slotAccent(el, '주의'); return; }
+  if (el.dataset && el.dataset.decision && DECISION_TONE[el.dataset.decision]) { slotAccent(el, DECISION_TONE[el.dataset.decision]); css(el, { padding: '10px 12px' }); return; }
+  if ((tag === 'p' || tag === 'li') && own) {
+    const rule = SLOT_TONE_RULES.find(r => r.test(own));
+    if (rule) slotAccent(el, rule.tone);
+  }
+}
+
 export function createStudentView({ api, onChange } = {}) {
   const pcDashboard = createPcDashboard({ api, onChange });
   return {
-    renderIdentity(input) { return renderIdentityView(input); },
-    renderDecision(input) { return renderDecisionView(input); },
-    renderEvents(input) { return renderEventsView(input); },
+    renderIdentity(input) { return themeSlot(renderIdentityView(input)); },
+    renderDecision(input) { return themeSlot(renderDecisionView(input)); },
+    renderEvents(input) { return themeSlot(renderEventsView(input)); },
     renderStatus(input) {
       const wrap = node('div', undefined, 'student-status-with-pc');
-      wrap.append(pcDashboard.render(input), renderStatusView(input));
+      wrap.append(pcDashboard.render(input), themeSlot(renderStatusView(input)));
       return wrap;
     },
-    renderVulnerabilities(input) { return renderVulnerabilitiesView(input); },
-    renderAiConnection(input) { return renderAiConnectionView(input); },
-    renderExplanation(input) { return renderExplanationView(input); },
-    renderAction(input) { return renderActionView(input); },
+    renderVulnerabilities(input) { return themeSlot(renderVulnerabilitiesView(input)); },
+    renderAiConnection(input) { return themeSlot(renderAiConnectionView(input)); },
+    renderExplanation(input) { return themeSlot(renderExplanationView(input)); },
+    renderAction(input) { return themeSlot(renderActionView(input)); },
   };
 }
