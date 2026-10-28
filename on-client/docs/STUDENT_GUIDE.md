@@ -89,7 +89,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\start-alekov.ps1
 | 끄기 | 앱을 켠 창에서 `Ctrl+C` | 브라우저 주소가 더 열리지 않으면 꺼진 것입니다. |
 | 다시 켜기 | 같은 `on-client` 폴더에서 4) 명령을 다시 실행 | 브라우저를 새로고침합니다. |
 | 포트 5189 충돌 | 4) 명령 끝에 ` -Port 5190` | 브라우저 주소도 `http://127.0.0.1:5190` 으로 엽니다. |
-| 설치형 묶음 만들기 | `npm.cmd run package-app -- --source . --out "<아직 없는 새 폴더>"` | 0.2.19 에서 생긴 제공 포장 도구. 담당자가 미리 설치한 승인 실행 환경이 있어야 하며, 없으면 `PROVIDED_RUNTIME_NOT_INSTALLED` 로 멈춥니다(6일차에 확인 예정, 아직 실행하지 않음). |
+| 설치형 묶음 만들기 | `npm.cmd run package-app -- --source . --out "<아직 없는 새 폴더>"` | 0.2.19 에서 생긴 제공 포장 도구. 담당자가 미리 설치한 승인 실행 환경이 있어야 하며, 없으면 `PROVIDED_RUNTIME_NOT_INSTALLED` 로 멈춥니다. 포털 안내에 따라 이번 과정에서는 실행하지 않습니다(수강생 PC 에 실행 환경 미준비). |
 
 ---
 
@@ -155,7 +155,7 @@ flowchart LR
 | 학생 | `student/extension.mjs` | **학생 구현** (13~20단계) |
 | 학생 | `student/engine-adapter.mjs` | 학생 영역이지만 이번 과정에서 고치지 않음 |
 | 학생 | `student/appearance.json`, `student/assets/brand-icon.png`, `student/assets/start-picture.webp` | **학생 작성** (마무리 기간 4일차, 그림은 직접 제작) |
-| 학생 | `docs/STUDENT_GUIDE.md` (이 문서), `docs/RUN_GUIDE.md`, `docs/REPRODUCTION_RECORD.md`, `docs/STUDENT_DATA_BACKUP.md` | **학생 작성** |
+| 학생 | `docs/STUDENT_GUIDE.md` (이 문서), `docs/RUN_GUIDE.md`, `docs/DEMO_AND_LIMITS.md`, `docs/REPRODUCTION_RECORD.md`, `docs/STUDENT_DATA_BACKUP.md` | **학생 작성** |
 
 ### 내가 구현한 함수 (`student/extension.mjs` → `createStudentView()`)
 
@@ -229,6 +229,7 @@ flowchart LR
 | 내 PC 관제 대시보드 | 2026-10-27 원래 폴더 앱에서 실제 값 조회·판정·추이·기록·키보드 초점·좁은 화면 배치 확인, 모의 입력 40가지 점검 |
 | 22단계 새 폴더 재현 | `docs/REPRODUCTION_RECORD.md` (커밋 `c31ed8b`, 22단계 통과) |
 | 한 장 실행 안내 따라 하기 | `docs/RUN_GUIDE.md` 맨 아래 기록 |
+| 시연 순서·한계·근거 (7일차) | `docs/DEMO_AND_LIMITS.md` (2026-10-28 실제 화면 값으로 시연 연습) |
 
 ### 미확인 · 기다림(UNV)
 
@@ -237,6 +238,6 @@ flowchart LR
 - CLCO 수업용 AI(④)로 실제 사건 설명을 받은 결과.
 - OSV 취약점 조회의 실제 결과(20단계): 받은 결과를 표시만 하며, 실제 조회는 확인하지 않았습니다.
 - 다른 PC 에서의 실행(새 폴더 재현은 이 PC 에서만 함).
-- 설치형 묶음(`npm run package-app`)과 설치 뒤 바로가기 실행(6일차 예정, 승인 실행 환경 필요).
+- 설치형 묶음(`npm run package-app`)과 설치 뒤 바로가기 실행: 포털 안내에 따라 이번 과정에서는 하지 않음(승인 실행 환경 미준비).
 
 따라서 이 버전은 **검증 중인 버전**이며 v1.0 이 아닙니다.
