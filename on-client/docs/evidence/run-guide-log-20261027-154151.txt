@@ -1,0 +1,32 @@
+
+[2026-10-27 15:41:51] script: day-5 run-through v1 (follows docs/RUN_GUIDE.md)
+[2026-10-27 15:41:51] == PREP (guide: Git, Node 22-24) ==
+[2026-10-27 15:41:51] git --version: git version 2.55.0.windows.5
+[2026-10-27 15:41:52] node --version: v24.21.0
+[2026-10-27 15:41:52] port 5189 already in use before start: True (original-folder app may be running)
+[2026-10-27 15:41:52] == 1. GET (guide step 1: git clone, cd on-client) ==
+[2026-10-27 15:41:52] git: Cloning into 'C:\kesheb-run-20261027-154151'...
+[2026-10-27 15:41:54] commit: 9fe14b4ad16aaa20bef3fcd5a60dc8b3737ef8c4
+[2026-10-27 15:41:54] in folder: C:\kesheb-run-20261027-154151\on-client
+[2026-10-27 15:41:54] == 2. START (guide step 2, default port, -Background added for script) : start-alekov.ps1 -Background ==
+[2026-10-27 15:41:55] start-alekov exit code: 1
+[2026-10-27 15:41:55] default start did not succeed; following guide troubleshooting row for port conflict: add -Port 5190
+[2026-10-27 15:41:55] == 2b. START with -Port 5190 (guide troubleshooting) : start-alekov.ps1 -Port 5190 -Background ==
+[2026-10-27 15:41:57] start-alekov exit code: 0
+[2026-10-27 15:41:57] using port 5190 listening: True
+[2026-10-27 15:41:57] == 3. SCREEN (guide step 3) port 5190 ==
+[2026-10-27 15:41:57] GET / -> 200 <!doctype html> <html lang="ko"> <head> <meta charset="utf-8"> <meta name="viewport" content="width=device-width, initial-scale=1"> <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; object-src 'none'; base...
+[2026-10-27 15:41:58] GET /student/extension.mjs -> 200 // 이 파일은 학생이 같은 프로젝트에서 이어서 구현합니다. // 제공 UI를 받은 것만으로 단계 완료를 인정하지 않습니다. // ---- 13단계: 로그인·기기·세션 상태 (renderIdentity) ---- const MODE_LABEL = { demo: '예제 자료', disconnected: '연결 없음', unknown: '확인 불가' }; const DEVICE_LABEL = { compliant: '보안 기준 충족', noncompliant: '보안 기준 미충족', unknown: '확인 불가' }; const SES...
+[2026-10-27 15:41:58] GET /student/appearance.json -> 200 {"schema":"alekov.student-appearance.view.v1","state":"applied","appName":"케셰브","icon":"/student/assets/brand-icon.png","startPicture":"/student/assets/start-picture.webp","dashboardPreset":"student-first","palette":{"accent":"#5b4bdb","accentSoft":"#ebe9fb","background":"#e8ebf4","surface":"#ffffff...
+[2026-10-27 15:41:58] GET /student/assets/brand-icon.png -> 200 137 80 78 71 13 10 26 10 0 0 0 13 73 72 68 82 0 0 1 0 0 0 1 0 8 6 0 0 0 92 114 168 102 0 0 22 126 99 97 66 88 0 0 22 126 106 117 109 98 0 0 0 30 106 117 109 100 99 50 112 97 0 17 0 16 128 0 0 170 0 56 155 113 3 99 50 112 97 0 0 0 22 88 106 117 109 98 0 0 0 71 106 117 109 100 99 50 109 97 0 17 0 16 1...
+[2026-10-27 15:41:58] GET /student/assets/start-picture.webp -> 200 82 73 70 70 112 105 0 0 87 69 66 80 86 80 56 32 220 82 0 0 112 252 1 157 1 42 208 7 224 1 62 61 30 142 69 34 33 161 144 168 220 100 32 3 196 179 183 125 139 254 197 245 218 47 48 132 103 189 159 253 183 135 26 56 73 255 121 253 181 17 218 43 126 1 211 71 202 185 3 100 63 237 191 185 111 69 243 95 22...
+[2026-10-27 15:41:59] GET /api/pc/status -> 200 {"ok":true,"data":{"schema":"aleph.on.pc-status.v1","measuredAt":"2026-10-27T06:41:59.609Z","source":"local-pc","metrics":{"memory":{"state":"ok","usedBytes":9870295040,"totalBytes":17017028608},"network":{"state":"ok","interfaceCount":2,"ipv4Count":2},"disk":{"state":"ok","totalBytes":410611453952,...
+[2026-10-27 15:41:59] == 4. STOP and RESTART (guide step 4) ==
+[2026-10-27 15:41:59] stop process 3212 on port 5190
+[2026-10-27 15:42:01] port 5190 listening after stop: False
+[2026-10-27 15:42:01] == 4b. RESTART -Port 5190 : start-alekov.ps1 -Port 5190 -Background ==
+[2026-10-27 15:42:03] start-alekov exit code: 0
+[2026-10-27 15:42:03] GET / -> 200 <!doctype html> <html lang="ko"> <head> <meta charset="utf-8"> <meta name="viewport" content="width=device-width, initial-scale=1"> <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; object-src 'none'; base...
+[2026-10-27 15:42:05] GET /api/pc/status -> 200 {"ok":true,"data":{"schema":"aleph.on.pc-status.v1","measuredAt":"2026-10-27T06:42:05.220Z","source":"local-pc","metrics":{"memory":{"state":"ok","usedBytes":9872551936,"totalBytes":17017028608},"network":{"state":"ok","interfaceCount":2,"ipv4Count":2},"disk":{"state":"ok","totalBytes":410611453952,...
+[2026-10-27 15:42:05] == left running on port 5190 for screen check ==
+[2026-10-27 15:42:05] == END ==
